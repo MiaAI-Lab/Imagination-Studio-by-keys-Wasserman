@@ -82,7 +82,11 @@ Rules:
   from another device carries it; a request from this computer itself (a loopback client naming a loopback Host, or,
   opened to the network, a client on one of its own addresses naming its own address or name: `access.local`,
   `server.this_computer`) needs none, by the owner's decision. `tailscale serve` arrives from a loopback address under a
-  `.ts.net` name and is asked: keep both conditions. Only `access.OPEN` is answered without it from elsewhere. The key
+  `.ts.net` name and is asked: keep both conditions. Only `access.OPEN` is answered without it from elsewhere, except
+  under the owner's opt-in `STUDIO_TRUST_TAILNET=1` (`access.tailnet`, off by default): a client on a Tailscale address,
+  and a loopback client naming this computer's one-word name with no proxy header; a proxied request (`tailscale
+  serve`, `funnel`) stays asked even then. `STUDIO_TRUST_NETWORKS` (`access.trusted_networks`, unset by default) adds
+  the owner's own private networks, such as the home LAN; a public network is never taken. Never turn either on by default. The key
   lives only in `<studio folder>/access-key` (0600): never put it in a job's params, a log, a saved URL, a report or
   the repo. Settings → Access key shows it, a QR code for a phone, and makes a new one.
 - This is not a server. `tensorfold serve` routes neither model; render with the scripts.
@@ -276,7 +280,9 @@ Rules:
   Mac on flux3-mlx in `$PREFIX/flux3-venv`, never in the Studio's venv. Edit a picture takes `image_model` too
   (`app/picture_edit.py`, `IMAGE_MODEL` to `scripts/edit.sh`): FLUX3-K edits are `flux3_workflow` in `spark/spark_edit.py`
   (ReferenceMultiLatent, upsampler with the i2i prompt) and `flux3_edit.py` on a Mac; LoRAs, angles and `base` are
-  Qwen's and a FLUX3-K edit refuses them. FLUX Kommunity
+  Qwen's and a FLUX3-K edit refuses them. Quick Edit (`app/static/quick.js`, the Image room's third tab) is the same
+  `edit` job with nothing to set but the model (`image`, `prompt`, a new `seed` a turn, `size: "source"`,
+  `image_model`): keep it that way, the settings are the model's own. FLUX Kommunity
   License: say so when asked about commercial use, and do not redistribute the weights.
 - MOSS-Image (`moss-image` in `IMAGE_MODELS`, `oneshot-setup-spark.sh --moss`, `moss_workflow` in
   `spark/spark_generate.py`): OpenMOSS's model, Apache 2.0, inside ComfyUI's workflow (v0.42.0 and

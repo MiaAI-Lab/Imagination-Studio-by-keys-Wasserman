@@ -718,6 +718,15 @@ by you only) and survives restarts and updates; *Make a new key* there signs eve
 `bash scripts/studio-key.sh` prints the same from a terminal. A clip read from another machine's app (Slate's
 *Import a take*) needs that app's key beside its address.
 
+**Your own tailnet without the key (opt-in).** Start the studio with `STUDIO_TRUST_TAILNET=1` (beside
+`HOST=0.0.0.0`) and a device that opens it straight on a Tailscale address (`http://100.x.y.z:7870` or its MagicDNS
+name) is let in without the key, as is this computer's own browser under its one-word name. Everything on your
+tailnet then gets in, shared devices included: limit who reaches this computer with Tailscale's access controls. The
+LAN still takes the key, and so do `tailscale serve` and `tailscale funnel` (a funnel is the public internet). Off by
+default. To let your home network in as well, add `STUDIO_TRUST_NETWORKS=192.168.1.0/24` (your LAN's range,
+comma-separated for more): every device on it then opens the studio without the key, so use it only on a network
+where you trust everyone. Only private ranges are taken; a public one, or `0.0.0.0/0`, is ignored.
+
 On the phone:
 
 - **Bottom bar**: Story, Image, Video, Previs, Sound and Edit, one tap each. **More** opens the Agent, the Library,
@@ -2255,6 +2264,20 @@ Agreement: non-commercial use only**; the LoRA's own file is Apache-2.0.
 On a Mac the step runs mflux's Qwen-Image-2.1 edit pipeline in bfloat16 (43 GiB at its peak); under 96 GB of memory
 the app asks for 8-bit weights (30 GiB at its peak in one run on a 256 GB Mac; not run on a smaller Mac). On a DGX
 Spark it is one more ComfyUI graph, with the LoRA merged at run time on the bfloat16 file.
+
+### Quick Edit
+
+The Image room's third tab, and a card on its Overview: one box, like a chat. Paste a picture from the clipboard
+(⌘V / Ctrl+V anywhere on the page), drop one on the box, press **+** for a file, or take one from the **Library**;
+type what is different; press the arrow (or Enter; Shift+Enter makes a new line). The result appears under the
+box, with *Edit this result* to keep going from it, *Download*, *Make a clip of it* and *Ask again*. A pasted clip
+gives its first frame.
+
+There is nothing else to set. The one choice on the bar is the picture model, each with its own best settings
+built in: **Qwen 2.1 Turbo** (8 steps), **FLUX3-K Fast** (16 steps) and **FLUX3-K Full** (50 steps), those of them
+installed here. The result keeps the picture's size and every turn draws a new seed, shown under the turn. It is
+the same `edit` job as *Edit a picture*; for LoRAs, the camera ring, several pictures or a size of your own use
+Create › Edit a picture.
 
 ### A scout image, then video
 
