@@ -140,3 +140,10 @@ def test_the_nodes_routes_are_wired_in():
     if (ROOT / "app" / "nodes.py").exists():
         reply = client.get("/api/nodes/graphs")
         assert reply.status_code == 200 and "templates" in reply.json()
+
+
+def test_every_theme_of_the_console_look_is_kept_and_an_unknown_one_is_refused(fresh):
+    for theme in ("studio", "light", "oled", "system"):
+        reply = client.post("/api/settings", json={"appearance": {"theme": theme}})
+        assert reply.status_code == 200 and reply.json()["settings"]["appearance"]["theme"] == theme, theme
+    assert client.post("/api/settings", json={"appearance": {"theme": "sepia"}}).status_code == 400
