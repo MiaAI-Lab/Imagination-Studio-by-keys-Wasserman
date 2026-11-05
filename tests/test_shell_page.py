@@ -1080,7 +1080,9 @@ def test_the_theme_cards_and_accent_swatches_save_what_is_picked():
 
 def test_text_size_scales_the_whole_studio_and_corrects_window_heights():
     css = (ROOT / "app" / "static" / "studio.css").read_text()
-    for size, zoom in (("compact", ".92"), ("large", "1.1"), ("largest", "1.2")):
+    assert ":root { zoom:1.1; --vh:calc(100vh / 1.1); }" in css  # Default: a step over the drawn size
+    assert "html.type-compact { zoom:1; --vh:100vh; }" in css  # Small: the drawn size
+    for size, zoom in (("large", "1.2"), ("largest", "1.35")):
         assert "html.type-" + size + " { zoom:" + zoom + "; --vh:calc(100vh / " + zoom + "); }" in css, size
     assert "#view, html.type-large aside#bay" not in css  # no longer the work area alone
     assert "max-height:calc(100vh" not in css  # every height from the window goes through --vh

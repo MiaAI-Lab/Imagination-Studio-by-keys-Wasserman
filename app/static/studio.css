@@ -741,11 +741,13 @@ header#top:has(#homebtn.hide) #backbtn { margin-right:10px; }
 
 /* ---------- Settings → Appearance, as classes on <html> (settings.js prefsApply; the first paint in index.html) ----------
    The themes and the accent are the variables at the top of this file. */
-/* Text size scales the whole studio, the sidebar and the queue included; --vh is the window's height at that scale */
-:root { --vh:100vh; }
-html.type-compact { zoom:.92; --vh:calc(100vh / .92); }
-html.type-large { zoom:1.1; --vh:calc(100vh / 1.1); }
-html.type-largest { zoom:1.2; --vh:calc(100vh / 1.2); }
+/* Text size scales the whole studio, the sidebar and the queue included; --vh is the window's height at that scale.
+   Small is the drawn size (1), Default a step up, then Large and Largest. A phone keeps the drawn size by default. */
+:root { zoom:1.1; --vh:calc(100vh / 1.1); }
+html.type-compact { zoom:1; --vh:100vh; }
+html.type-large { zoom:1.2; --vh:calc(100vh / 1.2); }
+html.type-largest { zoom:1.35; --vh:calc(100vh / 1.35); }
+@media (max-width:720px) { html:not(.type-compact):not(.type-large):not(.type-largest) { zoom:1; --vh:100vh; } }
 html.motion-reduce *, html.motion-reduce *::before, html.motion-reduce *::after { animation:none !important; transition:none !important; }
 html.theme-light audio { filter:none; }
 /* the marks drawn white for a dark page, inked for the light one */
