@@ -91,7 +91,13 @@ Both are off by default, and nothing of them runs unless set:
 Code: `app/access.py` (`tailnet`, `trusted_networks`) and `app/server.py`. Also documented in the README and
 `AGENTS.md`. Tests: `tests/test_access.py`.
 
-### 5. `deploy.sh`
+### 5. A README of its own
+
+This fork's `README.md` has only a link to the author's README upstream and a short list of what is unique here.
+Upstream's README is not copied. `tests/test_tutorial_lessons.py` checks the Character Swap times against
+`TUTORIAL.md` alone, since the README no longer carries them.
+
+### 6. `deploy.sh`
 
 Restarts the Studio's systemd user service and waits until the app answers again. It refuses while a job is queued or
 running unless given `--force`.
