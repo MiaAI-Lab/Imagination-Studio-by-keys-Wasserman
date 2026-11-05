@@ -18,7 +18,7 @@
 try { const a = JSON.parse(localStorage.getItem("studio-look") || "null"), c = document.documentElement.classList,
     th = a && a.theme || "studio", sys = th === "system" && window.matchMedia ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "studio") : th;
   if (sys === "light") c.add("theme-light"); if (sys === "oled") c.add("theme-oled");
-  if (a) { if (a.type_size === "large" || a.type_size === "largest") c.add("type-" + a.type_size);
+  if (a) { if (["compact", "large", "largest"].includes(a.type_size)) c.add("type-" + a.type_size);
     if (a.accent === "cobalt") c.add("accent-cobalt"); if (a.motion === "reduce") c.add("motion-reduce"); }
   const m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", sys === "light" ? "#FAFAF9" : sys === "oled" ? "#000000" : "#0C0C0E"); } catch (e) {}
 </script>

@@ -24,7 +24,7 @@ function prefs() { const d = SET.data || {}, out = {};
 // the look on <html>: the theme, a type size class, the accent, reduced motion (glow and poster are kept for old saves)
 function prefsApply(look) { const a = { ...SET_DEFAULTS.appearance, ...(look || prefs().appearance) }, root = typeof document !== "undefined" && document.documentElement;
   if (!root || !root.classList) return a;
-  for (const c of ["theme-light", "theme-oled", "type-large", "type-largest", "no-glow", "no-poster", "accent-cobalt", "motion-reduce"]) root.classList.remove(c);
+  for (const c of ["theme-light", "theme-oled", "type-compact", "type-large", "type-largest", "no-glow", "no-poster", "accent-cobalt", "motion-reduce"]) root.classList.remove(c);
   const shown = themeShown(a.theme);
   if (shown === "light") root.classList.add("theme-light"); if (shown === "oled") root.classList.add("theme-oled");
   const meta = typeof document.querySelector === "function" && document.querySelector('meta[name="theme-color"]');
@@ -87,7 +87,7 @@ const START_NAMES = { clip: "A clip with sound", scout: "Scout, then animate", s
 function setAppearance() { const a = prefs().appearance, put1 = patch => settingsSave({ appearance: patch }, true);
   return [setPanel("Appearance", "Applied as you choose, on this screen and every other one that opens the studio.",
     el("div", { class: "st-themes-wrap" }, el("div", { class: "st-what" }, el("b", {}, "Theme"), el("span", {}, "The sun and moon in the top bar switch between light and dark.")), setThemes(a.theme || "studio", v => put1({ theme: v }))),
-    setRow("Type size", "Text and controls in the work area", setSeg(a.type_size, { comfortable: "Comfortable", large: "Large", largest: "Largest" }, v => put1({ type_size: v }), "Type size")),
+    setRow("Text size", "The whole studio: the sidebar, every room and the queue", setSeg(a.type_size, { compact: "Small", comfortable: "Default", large: "Large", largest: "Largest" }, v => put1({ type_size: v }), "Text size")),
     setRow("Accent", "The one colour for the main button, what is selected and progress",
       el("div", { class: "st-accents", role: "radiogroup", "aria-label": "Accent" }, [["amber", "Amber"], ["cobalt", "Cobalt"]].map(([k, t]) =>
         el("button", { type: "button", role: "radio", "aria-checked": a.accent === k ? "true" : "false", class: "st-accent" + (a.accent === k ? " on" : ""), onclick: () => put1({ accent: k }) }, el("span", { class: "sw sw-" + k, "aria-hidden": "true" }), t)))),

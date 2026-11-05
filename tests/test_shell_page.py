@@ -442,7 +442,7 @@ def test_settings_shows_its_five_sections_and_the_look_saves():
     assert out["prefs"]["type_size"] == "large" and out["prefs"]["glow"] is False and out["prefs"]["start_cards"] == ["clip"]
     for words in ("Appearance", "Studio layout", "Presets & preferences", "Connections", "Models & weights", "Sparks", "Brains & tools", "Updates", "About"):
         assert any(words in r for r in out["rail"]), words
-    assert "Type size" in out["pages"]["appearance"] and "Cobalt" in out["pages"]["appearance"]
+    assert "Text size" in out["pages"]["appearance"] and "Small" in out["pages"]["appearance"] and "Default" in out["pages"]["appearance"] and "Cobalt" in out["pages"]["appearance"]
     for theme in ("Match the computer", "Light", "Dark", "Dark (OLED)"):  # the four themes of the Console look
         assert theme in out["pages"]["appearance"], theme
     assert "Poster on Home" not in out["pages"]["appearance"] and "Glowing pills" not in out["pages"]["appearance"]
@@ -1076,3 +1076,11 @@ def test_the_theme_cards_and_accent_swatches_save_what_is_picked():
       await button(page, "Cobalt").attrs.onclick(); out.accent = calls.filter(c => c[0] === "/api/settings" && c[1]).slice(-1)[0][1];""")
     assert out["on"] == ["false", "false", "true", "false"]
     assert out["theme"] == {"appearance": {"theme": "oled"}} and out["accent"] == {"appearance": {"accent": "cobalt"}}
+
+
+def test_text_size_scales_the_whole_studio_and_corrects_window_heights():
+    css = (ROOT / "app" / "static" / "studio.css").read_text()
+    for size, zoom in (("compact", ".92"), ("large", "1.1"), ("largest", "1.2")):
+        assert "html.type-" + size + " { zoom:" + zoom + "; --vh:calc(100vh / " + zoom + "); }" in css, size
+    assert "#view, html.type-large aside#bay" not in css  # no longer the work area alone
+    assert "max-height:calc(100vh" not in css  # every height from the window goes through --vh
