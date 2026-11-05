@@ -389,7 +389,7 @@ class WriteGuard:
         if access.enabled():
             client = (scope.get("client") or (None,))[0]
             if (access.needs_key(scope["path"]) and not this_computer(client, headers.get("host", ""))
-                    and not access.allowed(headers, APP_PORT, ACCESS_KEY)):
+                    and not trusted_tailnet(client, headers) and not access.allowed(headers, APP_PORT, ACCESS_KEY)):
                 if scope["type"] == "websocket":
                     return await send({"type": "websocket.close", "code": 4401})
                 return await JSONResponse({"error": "This device needs the studio's access key once: on the computer running the "
@@ -465,6 +465,12 @@ def this_computer(client: str | None, host: str) -> bool:
     return access.local(client, host, network_addresses(), OWN["labels"] or ())
 
 
+def trusted_tailnet(client: str | None, headers: dict) -> bool:
+    """access.tailnet with this computer's own names: only with STUDIO_TRUST_TAILNET=1 (the owner's choice)."""
+
+    return access.tailnet(client, headers.get("host", ""), headers, OWN["labels"] or ())
+
+
 def secure_request(scope, headers) -> bool:
     """Whether the page was opened over HTTPS (directly, or through `tailscale serve`): its cookie is then Secure."""
 
@@ -485,8 +491,10 @@ def key_state(request: Request):
     """Whether this browser needs the key (not on the computer itself) and whether it has it."""
 
     headers = {k.lower(): v for k, v in request.headers.items()}
-    here = this_computer(request.client.host if request.client else None, headers.get("host", ""))
-    return {"needed": access.enabled() and not here, "signed_in": here or access.allowed(headers, APP_PORT, ACCESS_KEY), "local": here}
+    client = request.client.host if request.client else None
+    here = this_computer(client, headers.get("host", ""))
+    let_in = here or trusted_tailnet(client, headers)
+    return {"needed": access.enabled() and not let_in, "signed_in": let_in or access.allowed(headers, APP_PORT, ACCESS_KEY), "local": here}
 
 
 # interfaces that are not a network another computer reaches this one on: containers, VMs, VPN tunnels (Tailscale's
@@ -1994,8 +2002,9 @@ def take(job: dict, params: dict, label: str = "") -> tuple[bool, dict, list[str
 
 
 def hush(clip: Path) -> None:
-    """The clip with its sound track silenced (``silent`` in a job's settings: a Flow clip without music). Asking the
-    model for near silence is not enough: on the Mac it laid music of its own over two of three such clips."""
+    """The clip with its sound track silenced (``silent`` in a job's settings: the Video page's *No sound*, or a Flow
+    clip without music; for a long video, its joined file). Asking the model for near silence is not enough: on the
+    Mac it laid music of its own over two of three such clips."""
 
     quiet = clip.with_name(clip.stem + ".quiet" + clip.suffix)
     done = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(clip), "-map", "0:v:0", "-map", "0:a?", "-c:v", "copy", "-af", "volume=0",
@@ -2297,6 +2306,8 @@ def perform_job(job: dict, worker: dict | None = None) -> None:
         elif job["kind"] == "long":
             if not long_take(job):
                 return
+            if params.get("silent"):  # the joined video, delivered silent like a single clip (hush)
+                hush(HOME / job["outputs"][0])
         elif job["kind"] == "voice":  # Fish Audio Drama 3 text to speech (voice.py), under the GPU lock
             if not voice_perform(job):
                 return
