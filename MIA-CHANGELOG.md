@@ -5,8 +5,9 @@ has that upstream ([drowzeys/Imagination-Studio-by-keys-Wasserman](https://githu
 does not.
 
 - **Compared against:** upstream `main` at `d08cc93` (Merge pull request #207, Windows native features), 2026-11-05.
-- **Where it lives:** branch `feat/console-ui`. It branches off upstream at `dbb6897` (the appearance themes of #197,
-  which upstream has merged).
+- **Where it lives:** this fork's `main`, which is upstream `main` up to `d08cc93` with the work below merged in
+  (merge commit `64df388`). The same work, before upstream's newer commits were merged in, is on branch
+  `feat/console-ui`.
 - **How it was checked:** `git cherry` of every fork branch against upstream `main`, then a look at each remaining
   commit's files, since upstream squashes some merges. Only what upstream really lacks is listed.
 
@@ -103,6 +104,17 @@ running unless given `--force`.
 | `a3f5dd7` | The Console look: Light, Dark, OLED and Match the computer, and the screens rebuilt |
 | `3486268` | Text size scales the whole studio, with Small; Quick Edit at the rooms' sizes |
 | `7221a8d` | Text size a step larger: Small is the old Default, Largest past the old Largest |
+| `ee2c327` | This file |
+| `64df388` | Merge onto upstream `main` (`d08cc93`), keeping upstream's Windows work (see below) |
+
+When merged onto upstream `main`, three files overlapped with upstream's Windows work (#198 to #207). Both sides were
+kept:
+- **Home:** the new composer, with Windows' per-platform gating on the kind tabs and Generate, and SD-Turbo as the
+  picture model's name there.
+- **Library:** the new side panel, with the same gating on its actions (*Extract last frame* on Windows).
+- **The room table:** Windows' "not on this platform" gate, with Quick Edit kept (gated as an edit).
+- **Tests:** `tests/test_shell_page.py` keeps both sides' stand-ins, and one upstream Windows test finds the kind tabs
+  by name instead of by position.
 
 ### Other fork branches upstream does not have
 
@@ -118,7 +130,7 @@ Fork branches whose work upstream has merged (sometimes squashed, so their commi
 `feat/appearance-themes` (#197), `port/168-local-gpu-workers` (#177), `fix/168-head-gpu` (local NVIDIA GPU
 workers, in #177), `feat/home-flux-yue` (#196), and the earlier PR branches.
 
-## Upstream changes not yet in this fork
+## Keeping up with upstream
 
-Upstream `main` has 25 commits that `feat/console-ui` does not have yet, mostly the Windows and RTX Spark N1X work
-(#198 to #207). They have not been merged in here.
+This `main` holds everything upstream `main` had at `d08cc93`, including the Windows and RTX Spark N1X work (#198 to
+#207). When upstream moves on, merge its `main` in here and update the commit at the top of this file.

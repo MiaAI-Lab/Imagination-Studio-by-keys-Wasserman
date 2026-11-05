@@ -757,7 +757,7 @@ def test_upstream_flux_and_yue_chips_cannot_bypass_windows_limits():
         music: { available: false, why: "Music is unqualified" } };
       S.music = { available: false, engine: "yue2", engines: { yue2: { installed: true, available: true }, music3: { available: false } } };
       HC.mode = "yue"; out.mode = hcMode(); out.model = hcPictureModel();
-      const chips = homeComposer().kids[0].kids;
+      const chips = find(homeComposer(), n => n.attrs && n.attrs.class === "cmp-modes").kids;
       out.fluxHidden = !chips.some(n => n.attrs["data-mode"] === "flux");
       out.yueDisabled = chips.find(n => n.attrs["data-mode"] === "yue").attrs.disabled;
       out.errors = [];
