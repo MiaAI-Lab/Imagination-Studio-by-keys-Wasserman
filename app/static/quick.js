@@ -73,6 +73,6 @@ function viewQuick() { const body = el("div", { class: "quick" }), st = QK.state
   const m = qkModels().find(x => x.id === QK.model) || {};
   put(body, el("div", { class: "note" }, "Describe the result, not the steps: what you do not mention is meant to stay. ", m.label ? m.label + " runs " + (steps[m.id] || "") + " with its own best settings; " : "", "there is nothing else to set. Results go to the Library. ",
     typeof edOpen === "function" ? el("button", { type: "button", class: "small ghost", id: "quickmore", title: "Create › Edit a picture, with this picture, these words and this model: for LoRAs, camera angles or several pictures",
-      onclick: () => { Object.assign(ED, { prompt: QK.prompt, model: qkModel(), more: [], job: null }); edOpen(QK.image); } }, "More tools: LoRAs, angles, several pictures →") : "For LoRAs, camera angles or several pictures use Create › Edit a picture."),
+      onclick: () => { Object.assign(ED, { prompt: QK.prompt, model: qkModel(), more: [], job: null, size: "source", base: false, loras: [], seed: Math.floor(Math.random() * 2147483647) || 1 }); edOpen(QK.image); } }, "More tools: LoRAs, angles, several pictures →") : "For LoRAs, camera angles or several pictures use Create › Edit a picture."),
     QK.turns.length ? el("div", { class: "qturns" }, el("h3", {}, "This session"), QK.turns.map(qkTurn)) : null);
   return el("section", { class: "card" }, body); }

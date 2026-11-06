@@ -123,11 +123,12 @@ def test_without_an_editing_model_the_page_says_so_and_queues_nothing():
 def test_edit_elsewhere_opens_quick_edit_and_more_tools_carries_the_edit_over():
     out = run(f"""answers["/api/edit/state"] = {json.dumps(STATE)}; QK.state = answers["/api/edit/state"];
       tab = "Library"; qkOpen("scouts/a/s1.png"); out.opened = [tab, QK.image];
-      globalThis.ED = {{}}; globalThis.edOpen = p => {{ ED.image = p; tab = "Create"; }};
+      globalThis.ED = {{ size: "1280", base: true, loras: [{{ id: "x" }}], more: ["uploads/old.png"] }}; globalThis.edOpen = p => {{ ED.image = p; tab = "Create"; }};
       QK.prompt = "make it night"; QK.model = "flux3k-fast";
-      const page = viewQuick(); button(page, "More tools").attrs.onclick(); out.more = [tab, ED.image, ED.prompt, ED.model];""")
+      const page = viewQuick(); button(page, "More tools").attrs.onclick(); out.more = [tab, ED.image, ED.prompt, ED.model]; out.reset = [ED.size, ED.base, ED.loras, ED.more];""")
     assert out["opened"] == ["Quick Edit", "scouts/a/s1.png"]
     assert out["more"] == ["Create", "scouts/a/s1.png", "make it night", "flux3k-fast"]
+    assert out["reset"] == ["source", False, [], []]  # a plain edit at the picture's own size, as Quick Edit makes
 
 
 def test_edit_this_frame_takes_the_frame_the_player_shows_into_quick_edit():

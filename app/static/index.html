@@ -807,7 +807,7 @@ function viewCreate() {
       negNote(),
       // the retake, the seed and the Sparks: folded, with what they are now (most takes need none of them)
       el("details", { class: "fold c1-renderopts", open: !!C.openRenderOpts, ontoggle: e => { C.openRenderOpts = e.target.open; } },
-        el("summary", {}, "Render options", el("span", { class: "c1-sum" }, (C.sameSeed ? "same seed " + C.seed : "a new seed each take") + (C.retake && !isLong() ? " · retake if the shot check fails" : ""))),
+        el("summary", {}, "Render options", el("span", { class: "c1-sum" }, (C.sameSeed || !(typeof prefs === "function" && prefs().presets.seed === "random") ? "seed " + C.seed + (C.sameSeed ? " every take" : "; Another take moves it on") : "a new seed each take") + (C.retake && !isLong() ? " · retake if the shot check fails" : ""))),
       isLong() ? null : el("label", { class: "check", title: "After the render the app looks at the clip (app/shot.py): does it open on its first frame and end on its last, and is there a cut inside it. The verdict is shown beside the clip either way." },
         bind(C, "retake", el("input", { type: "checkbox" })), el("span", {}, "If the shot check fails (a keyframe not held, or a cut inside the shot), render it once more at the next seed. That is a second full render.")),
       el("label", { class: "check", title: "Off: every new take of this setup gets its own seed. On: each take uses the seed shown under Engine, size and length." },

@@ -1240,12 +1240,12 @@ def test_create_draws_a_new_seed_for_another_take_unless_asked_for_the_same():
       const seeds = () => calls.filter(c => c[0] === "/api/jobs").map(c => c[1].params.seed);
       await createQueue(); await createAgain(); await createAgain();
       C.sameSeed = true; await createAgain(); await createQueue();
-      C.sameSeed = false; await createQueue();  // Render again: the seed that made the last take is not used again
+      C.sameSeed = false; await createQueue();  // Settings' fixed seed: Render again repeats the take
       out.fixed = seeds();
       // Settings' random seed: a seed that already made a take is replaced when Render is pressed again
       calls.length = 0; C.sameSeed = false; SET.data = { presets: { seed: "random" } }; C.seed = 5; await createQueue(); await createQueue();
       out.random = seeds();""")
-    assert out["fixed"] == [7, 8, 9, 9, 9, 10]
+    assert out["fixed"] == [7, 8, 9, 9, 9, 9]
     assert out["random"][0] == 5 and out["random"][1] != 5
 
 

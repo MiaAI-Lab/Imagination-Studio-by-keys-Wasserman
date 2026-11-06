@@ -427,11 +427,10 @@ async function createQueue() { if (C.queuing) return; C.queuing = true; try { re
 async function createQueueNow() { try {
   const why = createNotReady(); if (why) return toast(why); if (loraWants().length) return toast("A Look needs something first: see Render");
   if (!C.promptEdited || !String(C.prompt || "").trim()) await composeCreate();
-  // a seed that has already made a take is not used again unless "Same seed every take" is ticked or the Sharp Spec
-  // (whose seed is part of the recipe) is chosen: the next one follows it, or a new random one with Settings' random seed.
-  // The seed is drawn here, when the take is queued, not once when the page opens.
-  if (!C.sameSeed && C.seedUsed === Number(C.seed) && !(typeof sharpOn === "function" && sharpOn()))
-    C.seed = typeof prefs === "function" && prefs().presets.seed === "random" && typeof prefSeed === "function" ? prefSeed() : Number(C.seed) + 1;
+  // Settings' seed: fixed repeats a take when Render is pressed again (Another take moves it on), random gives every
+  // take a new one, drawn here when it is queued (not once when the page opens). "Same seed every take" and the Sharp
+  // Spec (whose seed is part of the recipe) keep it either way.
+  if (!C.sameSeed && C.seedUsed === Number(C.seed) && !(typeof sharpOn === "function" && sharpOn()) && typeof prefs === "function" && prefs().presets.seed === "random" && typeof prefSeed === "function") C.seed = prefSeed();
   const base = { prompt: C.prompt, image: noFrame() ? null : C.image, ...(typeof prefs === "function" && !prefs().presets.qa_gate ? { qa: false } : {}), ...(lastOf() ? { last_image: lastOf() } : {}), preset: C.preset, quality: C.quality, seed: C.seed, ...extras(), ...(isRef() ? { references: C.refs, ref_turbo: C.refPasses === "4", ...(refMedia() ? { reference_videos: await motionVideos(), reference_audios: C.refAudios, reference_video_sound: C.video_sound, ...(motionFields() ? { motion: { pack: C.motion.pack, layer: C.motion.layer, mode: C.motion.mode, measured: C.motion.measured || null, free: motionFree() }, pace: C.motion.pace || "auto", silent: paceOf(C.motion) === "flow" && !musicNamed() } : {}) } : {}) } : {}), ...(C.silent ? { silent: true } : {}) };
   const j = await api("/api/jobs", isLong() ? { kind: "long", title: S.long[C.seconds] + ": " + (C.action || C.scene || "Video").slice(0, 40), params: { ...base, total_seconds: Number(C.seconds), beats: (C.beats || "").split("\n") } }
     : { kind: "video", title: (C.action || C.scene || "Clip").slice(0, 48), params: { ...base, ...lengthOf(C), ...(C.retake ? { retake: true } : {}) } });

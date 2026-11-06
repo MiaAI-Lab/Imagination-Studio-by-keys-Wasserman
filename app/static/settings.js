@@ -143,7 +143,7 @@ function setPresets() { const p = prefs().presets, put1 = patch => settingsSave(
     setRow("Describe new clips automatically", "When nothing is rendering, the local model looks at new clips and pictures so the Library can search by what is in them", setSwitch(p.captions_auto !== false, v => put1({ captions_auto: v }), "Describe new clips automatically")),
     setRow("Delivery sound", (typeof cardFace === "function" && cardFace() ? "On this GPU" : "On a DGX Spark") + " a clip's sound is 32 kHz; 48 kHz stereo re-encodes only the sound", setSeg(p.audio_rate, { keep: "Keep 32 kHz", "48000": "48 kHz stereo" }, v => put1({ audio_rate: v }), "Delivery sound")),
     setRow("Song engine", "For the Music tab: best here is YuE2 where it is installed (Linux, NVIDIA) and MiniMax Music 3 on a Mac; each song can still choose", setSeg(p.music_engine === "yue2" && !yue ? "auto" : p.music_engine || "auto", { auto: "Best here", ...(yue ? { yue2: "YuE2" } : {}), music3: "MiniMax Music 3" }, v => put1({ music_engine: v }), "Song engine")),
-    setRow("Seed", "Where a new take's seeds start: fixed from the form's seed, random anywhere. A seed is used again only when “Same seed every take” is ticked", setSeg(p.seed, { fixed: "Fixed", random: "Random" }, v => put1({ seed: v }), "Seed")),
+    setRow("Seed", "Fixed: Render again repeats a take, Another take moves the seed on. Random: every take a new seed", setSeg(p.seed, { fixed: "Fixed", random: "Random" }, v => put1({ seed: v }), "Seed")),
     setRow("Renders go to", "The studio folder, set when the studio starts (STUDIO_HOME)", el("code", { class: "st-path" }, (S && S.home) || "the studio folder")))]; }
 
 /* ---------- 4. Connections ---------- */
