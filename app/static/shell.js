@@ -441,7 +441,8 @@ async function createQueueNow() { try {
 // are their own), long takes, or a take that already was Final. null when it does not apply
 function betterAsk(body) { if (!body || body.kind !== "video" || !body.params || typeof recipeParams !== "function") return null;
   const p = body.params, r = recipeParams("final");
-  if (p.references || p.reference_videos || p.reference_audios || (p.preset === r.preset && p.quality === r.quality)) return null;
+  // a custom size is the user's own shape: Final's size would change it, so it is not offered there
+  if (p.preset === "custom" || p.references || p.reference_videos || p.reference_audios || (p.preset === r.preset && p.quality === r.quality)) return null;
   const out = JSON.parse(JSON.stringify(body)); delete out.params.width; delete out.params.height; delete out.params.steps; delete out.params.retake;
   Object.assign(out.params, { preset: r.preset, quality: r.quality }); out.title = "Final: " + String(body.title || "Clip").replace(/^Final: /, "");
   return out; }
