@@ -265,11 +265,11 @@ def test_the_stage_offers_every_recipe_and_the_take_sheet_sets_one():
       const home = viewHome(); out.home = text(home);
       button(home, "A voice line").attrs.onclick(); out.voice = tab;
       const sheet = takeSheet(); out.sheet = text(sheet);
-      button(sheet, "Quick look").attrs.onclick(); out.quick = [C.passes, C.res];""")
+      button(sheet, "Draft").attrs.onclick(); out.quick = [C.passes, C.res];""")
     for words in ("A clip with sound", "Scout, then animate", "A still", "Sharp Spec", "A long take", "A voice line", "Song", "Ask your agent", "ScriptBreak", "Blockout", "Start something", "Recent takes"):
         assert words in out["home"], words
     assert out["voice"] == "Voice"
-    assert "This clip" in out["sheet"] and "Final 720p" in out["sheet"] and "Render clip" in out["sheet"] and "Describe the shot first." in out["sheet"]
+    assert "This clip" in out["sheet"] and "Final" in out["sheet"] and "8 passes · 1280 × 720" in out["sheet"] and "Render clip" in out["sheet"] and "Describe the shot first." in out["sheet"]
     assert out["quick"] == ["4", "480p"]  # a Spark without the 2x decoder finishes at 720p
 
 
@@ -496,7 +496,7 @@ def test_the_home_composer_queues_each_kind_and_carries_the_words():
       HC.mode = "clip"; HC.text = "A lighthouse at dusk"; hcMore(); out.more = [tab, C.prompt, C.goes];
       HC.text = "Plan a short"; hcAgent(); out.agent = [tab, AG.prompt];""")
     assert "What do you want to make?" in out["page"] and "Clip with sound" in out["page"] and "MiniMax H3" in out["page"] and "Drama 3" in out["page"] and "Music 3" in out["page"]
-    assert "Ask your agent instead" in out["page"] and "More options" in out["page"] and "Quick look" in out["page"]
+    assert "Ask your agent instead" in out["page"] and "More options" in out["page"] and "Draft · 864 × 480" in out["page"]
     assert out["primaries"] == 1  # Generate is the one primary on Home
     assert out["clip"]["kind"] == "video" and out["clip"]["params"]["preset"] == "small" and out["clip"]["params"]["quality"] == "fh4" and out["clip"]["params"]["prompt"].startswith("integrated")
     assert out["picture"]["kind"] == "scout" and out["picture"]["params"]["count"] == 1 and out["picture"]["params"]["preset"] == "2k"
@@ -1195,3 +1195,46 @@ def test_text_size_scales_the_whole_studio_and_corrects_window_heights():
         assert "html.type-" + size + " { zoom:" + zoom + "; --vh:calc(100vh / " + zoom + "); }" in css, size
     assert "#view, html.type-large aside#bay" not in css  # no longer the work area alone
     assert "max-height:calc(100vh" not in css  # every height from the window goes through --vh
+
+
+def test_a_home_retake_sends_the_same_request_again_with_the_next_seed():
+    out = run("""answers["/api/library"] = []; answers["/api/compose"] = { prompt: "integrated_multimodal_description: [Shot 1] A lighthouse." };
+      answers["/api/jobs"] = { id: "j1", title: "A lighthouse" };
+      HC.mode = "clip"; HC.text = "A lighthouse at dusk"; HC.image = "uploads/first.png"; HC.recipe = "quick"; HC.seconds = 5;
+      await hcGenerate(); out.first = calls.filter(c => c[0] === "/api/jobs").slice(-1)[0][1];
+      // the bar changes after the take: the retake still sends what made it
+      HC.recipe = "final"; HC.seconds = 10; HC.text = "Something else";
+      jobs = [{ id: "j1", status: "done", outputs: ["clips/a.mp4"] }];
+      await hcGenerate(HC.made[0]); out.again = calls.filter(c => c[0] === "/api/jobs").slice(-1)[0][1];""")
+    first, again = out["first"], out["again"]
+    assert first["params"]["image"] == "uploads/first.png"
+    assert again["params"]["seed"] == first["params"]["seed"] + 1
+    again["params"]["seed"] = first["params"]["seed"]
+    assert again == first  # recipe, length, words and first frame as they were
+
+
+def test_home_pictures_offer_animate_and_edit():
+    out = run("""answers["/api/library"] = [];
+      HC.made = [{ id: "p1", mode: "picture", text: "A gull", seed: 3, title: "A gull" }];
+      jobs = [{ id: "p1", status: "done", outputs: ["scouts/p1/s1.png", "scouts/p1/sheet.jpg"] }];
+      const made = hcMade(); out.made = text(made);
+      button(made, "Edit").attrs.onclick(); out.edit = [tab, QK.image];
+      button(made, "Animate").attrs.onclick(); out.animate = [tab, C.image, C.start, C.goes];""")
+    assert "Animate" in out["made"] and "Edit" in out["made"]
+    assert out["edit"] == ["Quick Edit", "scouts/p1/s1.png"]
+    assert out["animate"] == ["Create", "scouts/p1/s1.png", "own", "video"]
+
+
+def test_create_draws_a_new_seed_for_another_take_unless_asked_for_the_same():
+    out = run("""answers["/api/compose"] = { prompt: "integrated_multimodal_description: [Shot 1] A lighthouse." }; answers["/api/jobs"] = { id: "c1", title: "A lighthouse" };
+      globalThis.noFrame = () => true; globalThis.lastOf = () => null; globalThis.extras = () => ({}); globalThis.lengthOf = () => ({ seconds: 5 }); globalThis.loraWants = () => [];
+      Object.assign(C, { scene: "A lighthouse", action: "", camera: "", soundscape: "", prompt: "", promptEdited: false, preset: "small", quality: "fh4", seed: 7 });
+      const seeds = () => calls.filter(c => c[0] === "/api/jobs").map(c => c[1].params.seed);
+      await createQueue(); await createAgain(); await createAgain();
+      C.sameSeed = true; await createAgain();
+      out.fixed = seeds();
+      // Settings' random seed: a seed that already made a take is replaced when Render is pressed again
+      calls.length = 0; C.sameSeed = false; SET.data = { presets: { seed: "random" } }; C.seed = 5; await createQueue(); await createQueue();
+      out.random = seeds();""")
+    assert out["fixed"] == [7, 8, 9, 9]
+    assert out["random"][0] == 5 and out["random"][1] != 5

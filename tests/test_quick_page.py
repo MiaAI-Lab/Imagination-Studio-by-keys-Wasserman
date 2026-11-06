@@ -118,3 +118,13 @@ def test_without_an_editing_model_the_page_says_so_and_queues_nothing():
       QK.image = "uploads/a.png"; QK.prompt = "brighter"; await qkGo(); out.said = toasts[toasts.length - 1]; out.jobs = calls.filter(c => c[0] === "/api/jobs").length;""")
     assert "not set up on this machine" in out["page"] and "no edit pipeline" in out["page"]
     assert out["said"].startswith("Needs a picture model that edits") and out["jobs"] == 0
+
+
+def test_edit_elsewhere_opens_quick_edit_and_more_tools_carries_the_edit_over():
+    out = run(f"""answers["/api/edit/state"] = {json.dumps(STATE)}; QK.state = answers["/api/edit/state"];
+      tab = "Library"; qkOpen("scouts/a/s1.png"); out.opened = [tab, QK.image];
+      globalThis.ED = {{}}; globalThis.edOpen = p => {{ ED.image = p; tab = "Create"; }};
+      QK.prompt = "make it night"; QK.model = "flux3k-fast";
+      const page = viewQuick(); button(page, "More tools").attrs.onclick(); out.more = [tab, ED.image, ED.prompt, ED.model];""")
+    assert out["opened"] == ["Quick Edit", "scouts/a/s1.png"]
+    assert out["more"] == ["Create", "scouts/a/s1.png", "make it night", "flux3k-fast"]

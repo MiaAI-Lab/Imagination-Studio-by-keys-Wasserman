@@ -62,7 +62,8 @@ const prefSeed = () => prefs().presets.seed === "random" ? 1 + Math.floor(Math.r
 function prefsToCreate() { if (typeof C === "undefined" || (typeof location !== "undefined" && location.search && location.search.length > 1)) return;
   const p = prefs().presets; C.imageModel = p.image_model; C.seconds = p.seconds;
   if (p.recipe !== "custom") { const r = recipeParams(p.recipe); Object.assign(C, { engine: r.engine, passes: r.passes, res: r.res, up: r.up, steps: "" }); if (r.seed) C.seed = r.seed; }
-  if (p.seed === "random") C.seed = prefSeed(); if (typeof sync === "function") sync(); }
+  // a recipe that fixes its own seed (the Sharp Spec's 42) keeps it; Settings' random seed is for the others
+  if (p.seed === "random" && !(p.recipe !== "custom" && recipeParams(p.recipe).seed)) C.seed = prefSeed(); if (typeof sync === "function") sync(); }
 // the sidebar's rooms in the user's order, without the hidden ones (Machine and Settings always stay)
 function roomsShown(list) { const lay = prefs().layout, order = lay.order || [];
   const rank = r => { const i = order.indexOf(r.id); return i < 0 ? 1000 + list.indexOf(r) : i; };
@@ -126,7 +127,7 @@ function setPresets() { const p = prefs().presets, put1 = patch => settingsSave(
   const yue = !!(S && S.music && S.music.engines && S.music.engines.yue2 && S.music.engines.yue2.installed);
   const secs = el("select", { "aria-label": "Default clip length", onchange: e => put1({ seconds: Number(e.target.value) }) }, (lengths.length ? lengths : [5]).map(n => el("option", { value: n, selected: Number(p.seconds) === n }, n + " s")));
   return [setPanel("Presets & preferences", "What a new take starts from: the Home composer and the Create wizard open with these.",
-    setRow("Render recipe", "For clips from Home and a new Create", setSeg(p.recipe, { quick: "Quick look", ...(S && S.sharp ? { sharp: "Sharp Spec" } : {}), final: "Final 2K", custom: "Custom" }, v => put1({ recipe: v }), "Render recipe")),
+    setRow("Render recipe", "For clips from Home and a new Create", setSeg(p.recipe, { quick: "Draft", ...(S && S.sharp ? { sharp: "Sharp Spec" } : {}), final: "Final", custom: "Custom" }, v => put1({ recipe: v }), "Render recipe")),
     setRow("Picture model", "For stills and scouts", model),
     setRow("Clip length", "A clip's seconds; the exact frames are shown before it is queued", secs),
     setRow("Home starts on", "The composer's first chip", setSeg(p.mode, { clip: "Clip", picture: "Picture", voice: "Voice", song: "Song" }, v => put1({ mode: v }), "Home starts on")),

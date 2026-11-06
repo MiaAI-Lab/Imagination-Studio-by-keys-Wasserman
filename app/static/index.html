@@ -153,7 +153,10 @@ async function clearOut(body, ask) { if (ask && !confirm(ask + "\nFiles are move
 let S = null, jobs = [], tab = "Home", project = null;
 const TABS = ["Home", "Apps", "Story", "Image", "Video", "Previs", "Sound", "Edit", "Create", "Quick Edit", "Production", "Import", "Motion Previs", "Agent", "Voice", "Music", "Foley", "Editor", "Graphics", "Finish", "Cast & Places", "Director", "Motion graphics", "Night shift", "Library", "Looks", "Machine", "Models", "Sparks", "Brains", "Updates", "Tutorial", "Nodes", "Settings"];
 const C = { step: 0, mode: "scout", preset: "draft", quality: "standard", seconds: 5, seed: 1, scene: "", action: "", camera: "",
-  dialogue: [], soundscape: "", music: "N/A", imagePrompt: "", image: null, scoutJob: null, prompt: "", job: null, count: 4, imageSize: "1344x768", imageJob: null, imageModel: "qwen", beats: "", cw: 864, ch: 480, steps: "", loras: [], textEncoder: "", lastImage: null, frames: null, retake: false, silent: false, negations: [], negFor: null };
+  dialogue: [], soundscape: "", music: "N/A", imagePrompt: "", imagePromptEdited: false, image: null, scoutJob: null, prompt: "", job: null, count: 4, imageSize: "1344x768", imageJob: null, imageModel: "qwen", beats: "", cw: 864, ch: 480, steps: "", loras: [], textEncoder: "", lastImage: null, frames: null, retake: false, silent: false, negations: [], negFor: null };
+// the scout step's picture prompt box and Make scouts, kept so typing can update them without a redraw
+const SCOUT_UI = { area: null, make: null, queuing: false, paint() { if (SCOUT_UI.make) SCOUT_UI.make.disabled = !String(C.imagePrompt || "").trim(); } };
+const sceneTyped = () => { if (C.mode === "scout" && !C.imagePromptEdited) { C.imagePrompt = C.scene; if (SCOUT_UI.area) SCOUT_UI.area.value = C.scene; } SCOUT_UI.paint(); };
 let LORAS = [];  // the LoRA hub's recipes, with whether each is installed here
 const field = (labelText, node) => el("div", {}, el("label", {}, labelText), node);
 const bind = (obj, key, node, after) => { const isBox = node.type === "checkbox"; if (isBox) node.checked = !!obj[key]; else node.value = obj[key] ?? "";
@@ -610,7 +613,7 @@ function useMotionReference(ref, pack) {
 }
 
 /* ---------- Create ---------- */
-const C_TEXT = { scene: "", action: "", camera: "", dialogue: [], soundscape: "", music: "N/A", imagePrompt: "", prompt: "", beats: "" }, C_NOTES = { subjects: "refs", video_subjects: "refVideos", audio_notes: "refAudios" };
+const C_TEXT = { scene: "", action: "", camera: "", dialogue: [], soundscape: "", music: "N/A", imagePrompt: "", imagePromptEdited: false, prompt: "", beats: "" }, C_NOTES = { subjects: "refs", video_subjects: "refVideos", audio_notes: "refAudios" };
 function clearAllCreate() { const keys = [...Object.keys(C_TEXT), ...Object.keys(C_NOTES)], was = JSON.parse(JSON.stringify(Object.fromEntries(keys.map(k => [k, C[k]]))));
   const empty = { ...JSON.parse(JSON.stringify(C_TEXT)), ...Object.fromEntries(Object.entries(C_NOTES).map(([k, of]) => [k, C[of].map(() => "")])) };
   if (JSON.stringify(was) === JSON.stringify(empty)) return toast("Nothing to clear here");
@@ -620,7 +623,7 @@ function viewCreate() {
   body.setAttribute("data-clear", "create-" + C.step);
   sync();
   const goes = null;  // what the prompt goes to is chosen over the form (intentBar in shell.js)
-  const picture = field("Describe the scene / condition where it takes place", bind(C, "scene", el("textarea", { placeholder: isRef() ? "The woman with red hair sits at a wooden desk in a small radio studio at night, medium close-up, a warm lamp on the left." : "A middle-aged baker in a cream shirt and green apron behind a wooden counter in a small bakery at dawn, warm window light from the left…" })));
+  const picture = field("Describe the scene / condition where it takes place", bind(C, "scene", el("textarea", { placeholder: isRef() ? "The woman with red hair sits at a wooden desk in a small radio studio at night, medium close-up, a warm lamp on the left." : "A middle-aged baker in a cream shirt and green apron behind a wooden counter in a small bakery at dawn, warm window light from the left…" }), sceneTyped));
   if (C.mode === "edit") return viewEdit(goes);  // a picture re-drawn by the image model (edit.js)
   if (C.mode === "image") {
     // the prompt goes to the image model and stops there
@@ -638,12 +641,18 @@ function viewCreate() {
         : imageModel() === "moss-image" ? "MOSS-Image takes your prompt as written, about 45 s an image at 1344 × 768 once loaded; put the words to be lettered in quotes"
         : "FLUX3-K writes a full scene description from your prompt first (5 to 20 s, once for all the images), then makes each image: Fast about 10 to 15 s, Full about a minute") + "; seeds count up from the one given."),
       el("div", { class: "row", style: "margin-top:10px" }, el("button", { class: "hot fit", onclick: async () => { try { if (!C.scene.trim()) throw new Error("describe the picture first");
-        const j = await api("/api/jobs", { kind: "scout", title: "Image: " + C.scene.slice(0, 40), params: { prompt: C.scene, count: C.count, seed: C.seed, width: w, height: h, image_model: imageModel() } });
+        const ask = { kind: "scout", title: "Image: " + C.scene.slice(0, 40), params: { prompt: C.scene, count: C.count, seed: C.seed, width: w, height: h, image_model: imageModel() } };
+        const j = await api("/api/jobs", ask); C.imageAsk = JSON.parse(JSON.stringify(ask));
         C.imageJob = j.id; await poll(); render(); } catch (e) { toast(e.message); } } }, "Make image"), el("span")));
+    // More like these: the request that made these pictures again, on the seeds after theirs (the words and size as they were)
+    const more = async () => { try { const ask = JSON.parse(JSON.stringify(C.imageAsk)); ask.params.seed = (Number(ask.params.seed) || 0) + (Number(ask.params.count) || 1);
+      const j = await api("/api/jobs", ask); C.imageAsk = ask; C.seed = ask.params.seed; C.imageJob = j.id; await poll(); render(); } catch (e) { toast(e.message); } };
     if (made) { put(body, el("h3", {}, "Images"), jobCard(made));
       if (made.status === "done") put(body, el("div", { class: "grid", style: "margin-top:10px" }, made.outputs.filter(p => !p.endsWith("sheet.jpg")).map(p =>
         el("div", { class: "tile" }, media(p), el("div", { class: "cap" }, el("a", { href: file(p), download: "" }, "Download"),
-          el("a", { href: "#", onclick: e => { e.preventDefault(); C.image = p; C.goes = "video"; C.start = "own"; C.step = 1; changed(); } }, "animate this")))))); }
+          el("a", { href: "#", title: "A clip that opens on this picture", onclick: e => { e.preventDefault(); C.image = p; C.goes = "video"; C.start = "own"; C.step = 1; changed(); } }, "animate"),
+          typeof qkOpen === "function" ? el("a", { href: "#", title: "Change something in this picture (Quick Edit)", onclick: e => { e.preventDefault(); qkOpen(p); } }, "edit") : null)))),
+        C.imageAsk ? el("div", { class: "row", style: "margin-top:10px" }, el("button", { class: "fit", title: "The same words and size on the next seeds", onclick: more }, "More like these"), el("span")) : null); }
     return el("section", { class: "card" }, body);
   }
   const step0 = body => {
@@ -708,15 +717,25 @@ function viewCreate() {
         const r = await fetch("/api/upload", { method: "POST", body: data }); const j = await r.json(); if (j.path) { C.image = j.path; render(); } else toast(j.error || "upload failed"); } });
       put(body, el("h2", {}, "First frame"));
       if (C.mode === "scout") {
-        if (!C.imagePrompt) C.imagePrompt = C.scene;
+        // the picture prompt is the scene's words until it is edited by hand (sceneTyped keeps it in step while typing)
+        if (!C.imagePromptEdited) C.imagePrompt = C.scene;
         const scout = C.scoutJob && jobs.find(j => j.id === C.scoutJob);
-        put(body, imageModelPick(), field("Image prompt (" + imageModelName() + ")", bind(C, "imagePrompt", el("textarea"))),
+        const area = bind(C, "imagePrompt", el("textarea"), () => { C.imagePromptEdited = C.imagePrompt !== C.scene; SCOUT_UI.paint(); });
+        const make = el("button", { class: "primary fit", disabled: !C.imagePrompt.trim(), onclick: async () => { try { const j = await api("/api/jobs", { kind: "scout", title: "Scouts",
+              params: { prompt: C.imagePrompt, count: C.count, seed: C.seed, preset: C.preset, image_model: imageModel(), ...(C.preset === "custom" ? { width: Number(C.cw), height: Number(C.ch) } : {}) } }); C.scoutJob = j.id; await poll(); render(); } catch (e) { toast(e.message); } } }, "Make scouts");
+        Object.assign(SCOUT_UI, { area, make });
+        put(body, imageModelPick(), field("Image prompt (" + imageModelName() + ")" + (C.imagePromptEdited ? "" : ": the scene's words until you change them"), area),
           el("div", { class: "row" }, el("div", { class: "fit", style: "width:120px" }, el("label", {}, "How many"), bind(C, "count", el("input", { type: "number", min: 1, max: 12 }))),
-            el("button", { class: "primary fit", disabled: !C.imagePrompt.trim(), onclick: async () => { try { const j = await api("/api/jobs", { kind: "scout", title: "Scouts",
-              params: { prompt: C.imagePrompt, count: C.count, seed: C.seed, preset: C.preset, image_model: imageModel(), ...(C.preset === "custom" ? { width: Number(C.cw), height: Number(C.ch) } : {}) } }); C.scoutJob = j.id; await poll(); render(); } catch (e) { toast(e.message); } } }, "Make scouts"), el("span")),
+            make, el("span")),
           scout ? el("div", { class: "note" }, "Scout job: ", el("span", { class: "pill " + scout.status }, scout.status)) : el("div", { class: "note" }, "Six scouts take about half a minute. They are made at the size the video model starts from."));
+        // each scout: click to choose it, Animate this to queue the clip on it at once, Use as end to end the clip on it
+        const stop = (e, f) => { if (e && e.stopPropagation) e.stopPropagation(); f(); };
         if (scout && scout.status === "done") put(body, el("div", { class: "grid", style: "margin-top:10px" }, scout.outputs.filter(p => !p.endsWith("sheet.jpg")).map(p =>
-          el("div", { class: "tile" + (C.image === p ? " on" : ""), onclick: () => { C.image = p; render(); } }, media(p), el("div", { class: "cap" }, p.split("/").pop(), C.image === p ? "✓ selected" : "pick")))));
+          el("div", { class: "tile" + (C.image === p ? " on" : ""), onclick: () => { C.image = p; render(); } }, media(p), el("div", { class: "cap" }, p.split("/").pop(), C.image === p ? "✓ selected" : C.lastImage === p ? "✓ end" : "pick"),
+            el("div", { class: "cap", style: "padding-top:0;justify-content:flex-end" },
+              el("button", { class: "small", title: "Queue the clip now, opening on this picture, with the recipe and length on the right", disabled: !!SCOUT_UI.queuing, onclick: e => stop(e, async () => {
+                if (SCOUT_UI.queuing || C.queuing) return; SCOUT_UI.queuing = true; C.image = p; if (C.lastImage === p) C.lastImage = null; C.prompt = ""; try { await createQueue(); } finally { SCOUT_UI.queuing = false; render(); } }) }, "Animate this"),
+              el("button", { class: "small ghost", title: "The clip ends on this picture (its last frame)", onclick: e => stop(e, () => { C.lastImage = C.lastImage === p ? null : p; C.prompt = ""; render(); }) }, C.lastImage === p ? "Not the end" : "Use as end"))))));
       } else put(body, field("Upload an image", up), clipFrames(p => { C.image = p; C.prompt = ""; }, "Or continue from a clip in the Library"));
       if (C.mode !== "scout" && C.image && C.image.startsWith("scouts/")) put(body, el("div", { class: "note" }, "Using the image you chose to animate."));
       if (C.image) put(body, el("h3", {}, "Selected first frame"), el("div", { style: "max-width:420px" }, media(C.image, { style: "width:100%;border-radius:8px" })),
@@ -754,12 +773,14 @@ function viewCreate() {
       negNote(),
       isLong() ? null : el("label", { class: "check", title: "After the render the app looks at the clip (app/shot.py): does it open on its first frame and end on its last, and is there a cut inside it. The verdict is shown beside the clip either way." },
         bind(C, "retake", el("input", { type: "checkbox" })), el("span", {}, "If the shot check fails (a keyframe not held, or a cut inside the shot), render it once more at the next seed. That is a second full render.")),
+      el("label", { class: "check", title: "Off: every new take of this setup gets its own seed. On: each take uses the seed shown under Engine, size and length." },
+        bind(C, "sameSeed", el("input", { type: "checkbox" }), () => render()), el("span", {}, "Same seed every take (seed " + C.seed + ")")),
       // how many Sparks this job may use, and what that means for it, before it is queued (sparks.js)
       el("div", { style: "margin-top:10px" }, sparksPick({ kind: isLong() ? "long" : "video", clips: 1, params: { loras: lorasOf(C), ...(isRef() ? { references: C.refs, reference_videos: C.refVideos, reference_audios: C.refAudios, ref_turbo: C.refPasses === "4" } : {}), ...(encoderOf() ? { text_encoder: encoderOf() } : {}) } })),
       el("div", { class: "row", style: "margin-top:12px" }, el("button", { class: "hot fit", disabled: !!why, onclick: createQueue }, "Render clip"),
         // a new clip with the same settings, or with the words cleared
-        C.job ? el("button", { class: "fit", onclick: () => { C.job = null; render(); window.scrollTo({ top: 0, behavior: "smooth" }); } }, "Another take, same setup") : null,
-        el("button", { class: "fit ghost", onclick: () => { Object.assign(C, { step: 0, job: null, prompt: "", promptEdited: false, scene: "", action: "", camera: "", dialogue: [], soundscape: "", music: "N/A", imagePrompt: "", image: null, lastImage: null, scoutJob: null, beats: "", refs: [], subjects: [], refVideos: [], video_subjects: [], refAudios: [], audio_notes: [], video_sound: false, motion: null }); MA.job = null; Object.assign(REF_SAID, { pictures: "", videos: "", audios: "" }); render(); } }, "Start a new clip"), el("span")));
+        C.job ? el("button", { class: "fit", title: C.sameSeed ? "Queue the same setup again with the same seed" : "Queue the same setup again with the next seed", onclick: () => createAgain() }, C.sameSeed ? "Another take, same seed" : "Another take, new seed") : null,
+        el("button", { class: "fit ghost", onclick: () => { Object.assign(C, { step: 0, job: null, prompt: "", promptEdited: false, scene: "", action: "", camera: "", dialogue: [], soundscape: "", music: "N/A", imagePrompt: "", imagePromptEdited: false, image: null, lastImage: null, scoutJob: null, beats: "", refs: [], subjects: [], refVideos: [], video_subjects: [], refAudios: [], audio_notes: [], video_sound: false, motion: null }); MA.job = null; Object.assign(REF_SAID, { pictures: "", videos: "", audios: "" }); render(); } }, "Start a new clip"), el("span")));
     if (job) { put(body, el("h3", {}, "This clip"), jobCard(job));
       if (job.status === "done") put(body, el("video", { class: "main", src: file(job.outputs[0]), controls: true }),
         el("div", { class: "row", style: "margin-top:8px" }, el("button", { class: "fit", onclick: () => addToTimeline(job.outputs[0]) }, "Add to the editor timeline"), el("a", { class: "fit", href: file(job.outputs[0]), download: "" }, "Download"),

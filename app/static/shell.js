@@ -369,11 +369,12 @@ function shellStart() {
   telStart(); }
 
 /* ---------- "This clip", beside Create: recipes in plain words, the length, the take at a glance, one Render button ---------- */
-function takeRecipes() { const final = UPSCALED["720p"] && S.presets[UPSCALED["720p"][0]] ? { res: "720p", up: true, label: "Final " + UPSCALED["720p"][1].replace(/^\d+x\d+ ?/, "").replace(/[()]/g, "") || "Final" } : { res: "720p", up: false, label: "Final 720p" };
+// the names say what they are for; the size each one delivers is printed beside it, the same on every machine
+function takeRecipes() { const final = UPSCALED["720p"] && S.presets[UPSCALED["720p"][0]] ? { res: "720p", up: true, label: "Final" } : { res: "720p", up: false, label: "Final" };
   return [
-    { id: "quick", title: "Quick look", says: "4 passes · 864 × 480", on: () => C.engine === "fasth3" && C.passes === "4" && C.res === "480p" && !C.up && !customOn(), set: () => { Object.assign(C, { engine: "fasth3", passes: "4", res: "480p", up: false, steps: "" }); changed(); } },
+    { id: "quick", title: "Draft", says: "4 passes · 864 × 480", on: () => C.engine === "fasth3" && C.passes === "4" && C.res === "480p" && !C.up && !customOn(), set: () => { Object.assign(C, { engine: "fasth3", passes: "4", res: "480p", up: false, steps: "" }); changed(); } },
     S.sharp ? { id: "sharp", title: "Sharp Spec", says: "Sam's locked recipe · 1376 × 768", on: sharpOn, set: sharpCreate } : null,
-    { id: "final", title: final.label, says: "8 passes · " + (final.up ? UPSCALED["720p"][1] : "1280 × 720"), on: () => C.engine === "fasth3" && C.passes === "8" && C.res === "720p" && !!C.up === final.up && !customOn(), set: () => { Object.assign(C, { engine: "fasth3", passes: "8", res: "720p", up: final.up, steps: "" }); changed(); } },
+    { id: "final", title: final.label, says: "8 passes · " + (final.up ? UPSCALED["720p"][1].replace(/^(\d+)x(\d+).*/, "$1 × $2") : "1280 × 720"), on: () => C.engine === "fasth3" && C.passes === "8" && C.res === "720p" && !!C.up === final.up && !customOn(), set: () => { Object.assign(C, { engine: "fasth3", passes: "8", res: "720p", up: final.up, steps: "" }); changed(); } },
   ].filter(Boolean); }
 function takeSheet() {
   const video = C.goes === "video", est = el("span", { class: "c1-eta" });
@@ -414,13 +415,23 @@ function createReadyPaint() { if (typeof document === "undefined" || !document.q
 async function composeCreate() { const r = await api("/api/compose", { fields: { ...C, motion: isRef() ? motionFields() : null }, first_frame: !noFrame(), last_frame: !!lastOf(), ...lengthOf(C), references: isRef() ? Math.max(C.refs.length, refMedia() ? 0 : 1) : 0, referenced: isRef(), loras: isRef() ? lorasOf(C) : [] });
   C.prompt = r.prompt; return r.prompt; }
 // Render, from the page or the side panel: the prompt is rebuilt from the fields unless it was edited by hand
-async function createQueue() { try {
+// one take at a time from every Render button (the side panel, the page, Another take, a scout's Animate this): a second
+// press while the first is still being composed and queued must not queue a second clip
+async function createQueue() { if (C.queuing) return; C.queuing = true; try { return await createQueueNow(); } finally { C.queuing = false; } }
+async function createQueueNow() { try {
   const why = createNotReady(); if (why) return toast(why); if (loraWants().length) return toast("A Look needs something first: see Render");
   if (!C.promptEdited || !String(C.prompt || "").trim()) await composeCreate();
+  // a seed is drawn when a take is queued, not once when the page opens: with Settings' random seed, a seed that has
+  // already made a take is replaced by a new one, unless "Same seed every take" is ticked or the Sharp Spec (whose
+  // seed is part of the recipe) is chosen
+  if (!C.sameSeed && C.seedUsed === Number(C.seed) && !(typeof sharpOn === "function" && sharpOn()) && typeof prefs === "function" && prefs().presets.seed === "random" && typeof prefSeed === "function") C.seed = prefSeed();
   const base = { prompt: C.prompt, image: noFrame() ? null : C.image, ...(typeof prefs === "function" && !prefs().presets.qa_gate ? { qa: false } : {}), ...(lastOf() ? { last_image: lastOf() } : {}), preset: C.preset, quality: C.quality, seed: C.seed, ...extras(), ...(isRef() ? { references: C.refs, ref_turbo: C.refPasses === "4", ...(refMedia() ? { reference_videos: await motionVideos(), reference_audios: C.refAudios, reference_video_sound: C.video_sound, ...(motionFields() ? { motion: { pack: C.motion.pack, layer: C.motion.layer, mode: C.motion.mode, measured: C.motion.measured || null, free: motionFree() }, pace: C.motion.pace || "auto", silent: paceOf(C.motion) === "flow" && !musicNamed() } : {}) } : {}) } : {}), ...(C.silent ? { silent: true } : {}) };
   const j = await api("/api/jobs", isLong() ? { kind: "long", title: S.long[C.seconds] + ": " + (C.action || C.scene || "Video").slice(0, 40), params: { ...base, total_seconds: Number(C.seconds), beats: (C.beats || "").split("\n") } }
     : { kind: "video", title: (C.action || C.scene || "Clip").slice(0, 48), params: { ...base, ...lengthOf(C), ...(C.retake ? { retake: true } : {}) } });
-  C.job = j.id; toast("Queued: " + j.title); await poll(); render(); } catch (e) { toast(e.message); } }
+  C.job = j.id; C.seedUsed = Number(C.seed); toast("Queued: " + j.title + " · seed " + C.seed); await poll(); render(); } catch (e) { toast(e.message); } }
+// Another take: queued at once with the next seed (the shot check's own retake rule), or the same one when asked for
+// (the next seed wins over Settings' random seed here: a retake follows on from the take it repeats)
+function createAgain() { if (C.queuing) return; if (!C.sameSeed) C.seed = (Number(C.seed) || 0) + 1; return createQueue(); }
 // what the prompt goes to, as one small control over Create: the Image and Video rooms open it already set
 function intentBar() { const opts = { video: "Video with sound", image: "Image", edit: "Edit a picture" };
   const marks = C.goes === "video" ? [mark("minimax"), S && S.platform === "spark" ? mark("comfy") : null, mark("tensorfold")] : [mark("qwen", "Qwen 2.1"), mark("flux")];
