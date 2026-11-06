@@ -102,6 +102,21 @@ Upstream's README is not copied. `tests/test_tutorial_lessons.py` checks the Cha
 Restarts the Studio's systemd user service and waits until the app answers again. It refuses while a job is queued or
 running unless given `--force`.
 
+### 7. The simple studio and fewer steps to a picture or clip (branch `feat/easy-create`)
+
+- **The simple studio.** A new studio opens with Home, Video, Image and Library only. One switch shows every room;
+  `app/settings.py` `layout.simple`.
+- **Another take is another take.** The seed is drawn per take; Home's Retake re-sends its own request.
+- **Next actions under every result.** Animate, Edit (Quick Edit), More like these, Edit this frame, Higher quality,
+  Extend / Restyle / Fix / Upscale.
+- **Scouts.** Animate this and Use as end on each scout.
+- **Create's first frame.** Change something in it (with Undo); Crop it to fit (POST `/api/fit`).
+- **Smaller changes.** Reference Insert chips, recipes named Draft / Final with their sizes, and the 20-pass and
+  picture-model hints.
+
+Plan and status: `docs/opus.md`. Tests: `tests/test_shell_page.py`, `test_quick_page.py`, `test_settings.py`,
+`test_lastframe.py`.
+
 ### Commits
 
 | Commit | What |
