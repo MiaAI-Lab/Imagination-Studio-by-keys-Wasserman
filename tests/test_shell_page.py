@@ -1231,10 +1231,30 @@ def test_create_draws_a_new_seed_for_another_take_unless_asked_for_the_same():
       Object.assign(C, { scene: "A lighthouse", action: "", camera: "", soundscape: "", prompt: "", promptEdited: false, preset: "small", quality: "fh4", seed: 7 });
       const seeds = () => calls.filter(c => c[0] === "/api/jobs").map(c => c[1].params.seed);
       await createQueue(); await createAgain(); await createAgain();
-      C.sameSeed = true; await createAgain();
+      C.sameSeed = true; await createAgain(); await createQueue();
+      C.sameSeed = false; await createQueue();  // Render again: the seed that made the last take is not used again
       out.fixed = seeds();
       // Settings' random seed: a seed that already made a take is replaced when Render is pressed again
       calls.length = 0; C.sameSeed = false; SET.data = { presets: { seed: "random" } }; C.seed = 5; await createQueue(); await createQueue();
       out.random = seeds();""")
-    assert out["fixed"] == [7, 8, 9, 9]
+    assert out["fixed"] == [7, 8, 9, 9, 9, 10]
     assert out["random"][0] == 5 and out["random"][1] != 5
+
+
+def test_the_simple_studio_shows_the_rooms_that_make_pictures_and_clips():
+    out = run("""answers["/api/library"] = []; answers["/api/settings"] = { settings: { layout: { hidden: ["library"], order: [], simple: true } } };
+      SET.data = { layout: { hidden: ["library"], order: [], simple: true }, presets: { mode: "voice" } };
+      out.rooms = roomsShown(ROOMS).map(r => r.id);
+      const home = viewHome(); out.home = text(home); out.mode = hcMode();
+      out.kinds = find(home, n => n.attrs && n.attrs.class === "cmp-modes").kids.map(b => b.attrs["data-mode"]);
+      await button(home, "show all tools").attrs.onclick(); out.saved = calls.filter(c => c[0] === "/api/settings" && c[1]).slice(-1)[0][1];
+      SET.data = { layout: { hidden: ["library"], order: [], simple: false } };
+      out.full = roomsShown(ROOMS).map(r => r.id); out.fullHome = text(viewHome());""")
+    assert out["rooms"] == ["video", "image", "library", "machine", "settings"]
+    assert out["mode"] == "clip" and set(out["kinds"]) <= {"clip", "picture", "flux"}  # voice and song are in their rooms
+    for gone in ("Start something", "Night shift", "Wasserman's Filmmaker Suite", "Ask your agent instead"):
+        assert gone not in out["home"], gone
+    assert "What do you want to make?" in out["home"] and "Recent takes" in out["home"] and "Search (⌘K)" in out["home"]
+    assert out["saved"] == {"layout": {"simple": False}}
+    assert "library" not in out["full"] and "sound" in out["full"]  # the owner's own layout comes back
+    assert "Too much here?" in out["fullHome"] and "Start something" in out["fullHome"]

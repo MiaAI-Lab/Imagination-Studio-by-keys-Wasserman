@@ -658,7 +658,7 @@ function viewCreate() {
   const step0 = body => {
     const est = el("span", { class: "eta" });
     put(body, el("h2", {}, "The shot"), goes,
-      el("label", {}, "The clip starts from"), choice(C, "start", { text: ["Text only", "no first frame"], scout: ["A scout image", "make several with " + imageModels().map(m => m.label).join(" or ") + ", pick one"], own: ["Your own image", "upload a picture"],
+      el("label", {}, "The clip starts from"), choice(C, "start", { text: ["Text only", "no first frame"], scout: ["Pictures to choose from", "make a few with " + imageModelName() + ", pick one"], own: ["Your own image", "upload a picture"],
         ...(S.ref2va ? { refs: S.ref_media ? ["References", "pictures, videos or audio: keep a face, a motion or a voice"] : ["Reference pictures", "keep a face or a thing, in a new scene"] } : {}) }, changed),
       picture,
       field("What happens to the characters inside the scene / clip", bind(C, "action", el("textarea", { placeholder: "He lifts the loaf with both hands, sets it down, looks at the camera and smiles." }))),
@@ -771,12 +771,16 @@ function viewCreate() {
       wants.map(w => el("div", { class: "note lorawant", style: "color:var(--warn)" }, el("b", {}, w.name + " needs: "), w.text + " ", el("button", { type: "button", class: "small", onclick: w.go }, w.label))),
       el("div", { class: "note c1-notready", style: "color:var(--warn)" + (why && !wants.length ? "" : ";display:none") }, why || ""),
       negNote(),
+      // the retake, the seed and the Sparks: folded, with what they are now (most takes need none of them)
+      el("details", { class: "fold c1-renderopts", open: !!C.openRenderOpts, ontoggle: e => { C.openRenderOpts = e.target.open; } },
+        el("summary", {}, "Render options", el("span", { class: "c1-sum" }, (C.sameSeed ? "same seed " + C.seed : "a new seed each take") + (C.retake && !isLong() ? " · retake if the shot check fails" : ""))),
       isLong() ? null : el("label", { class: "check", title: "After the render the app looks at the clip (app/shot.py): does it open on its first frame and end on its last, and is there a cut inside it. The verdict is shown beside the clip either way." },
         bind(C, "retake", el("input", { type: "checkbox" })), el("span", {}, "If the shot check fails (a keyframe not held, or a cut inside the shot), render it once more at the next seed. That is a second full render.")),
       el("label", { class: "check", title: "Off: every new take of this setup gets its own seed. On: each take uses the seed shown under Engine, size and length." },
         bind(C, "sameSeed", el("input", { type: "checkbox" }), () => render()), el("span", {}, "Same seed every take (seed " + C.seed + ")")),
       // how many Sparks this job may use, and what that means for it, before it is queued (sparks.js)
       el("div", { style: "margin-top:10px" }, sparksPick({ kind: isLong() ? "long" : "video", clips: 1, params: { loras: lorasOf(C), ...(isRef() ? { references: C.refs, reference_videos: C.refVideos, reference_audios: C.refAudios, ref_turbo: C.refPasses === "4" } : {}), ...(encoderOf() ? { text_encoder: encoderOf() } : {}) } })),
+      ),
       el("div", { class: "row", style: "margin-top:12px" }, el("button", { class: "hot fit", disabled: !!why, onclick: createQueue }, "Render clip"),
         // a new clip with the same settings, or with the words cleared
         C.job ? el("button", { class: "fit", title: C.sameSeed ? "Queue the same setup again with the same seed" : "Queue the same setup again with the next seed", onclick: () => createAgain() }, C.sameSeed ? "Another take, same seed" : "Another take, new seed") : null,

@@ -120,6 +120,10 @@ function renderShell() {
       // About has a button of its own under Settings: the credits, licences and links (Settings → About)
       if (r.id === "settings") nav.push(el("button", { class: aboutOn() ? "on" : "", "data-room": "about", "data-group": "vaults", type: "button", title: "About: credits, licences and links",
         "aria-current": aboutOn() ? "page" : false, onclick: () => { if (typeof goSettings === "function") goSettings("about"); else go("Settings"); } }, icon("about", "ic"), el("span", { class: "lbl" }, "About"))); } }
+  // the simple studio's switch, at the foot of the rooms: one control, two states (Settings › Studio layout reads the same key)
+  if (typeof simpleOn === "function") { const on = simpleOn();
+    nav.push(el("button", { class: "simplebtn", "data-room": "simple", type: "button", title: on ? "Show every room in the sidebar (voice, music, film, motion graphics and the rest)" : "Only Home, Video, Image and Library in the sidebar; every room stays one ⌘K away",
+      onclick: () => simpleSet(!on) }, icon(on ? "more" : "home", "ic"), el("span", { class: "lbl" }, on ? "All tools" : "Simple studio"))); }
   // phones only (studio.css): the bar keeps the engines and folds the vaults, search and updates into More
   nav.push(el("button", { class: "more" + (now && (now.group !== "engines" || now.fold) ? " on" : ""), "data-room": "more", type: "button", title: "More: the Agent, the Studio Vaults, search and updates", "aria-haspopup": "dialog", onclick: moreOpen },
     icon("more", "ic"), el("span", { class: "lbl" }, "More")));
@@ -131,6 +135,7 @@ function renderShell() {
   const tabs = now && now.tabs.length > 1 ? now.tabs : [];
   $("#subtabs").replaceChildren(...tabs.map(t => el("button", { class: t === tab ? "on" : "", "aria-current": t === tab ? "page" : false, onclick: () => go(t) }, TAB_NAMES[t] || t)));
   document.body.classList.toggle("quiet", SHELL.lastTab === tab); SHELL.lastTab = tab;
+  document.body.classList.toggle("simple", typeof simpleOn === "function" && simpleOn());  // a phone's bar keeps Library then (studio.css)
 }
 const SHELL = { lastTab: null, tel: null, history: [], samples: [], es: null, telAt: 0, libCache: null, telWait: 2000, telPoll: null, telDog: null };
 // the More sheet on phones: the Studio Vaults, ⌘K search and Updates, which the bottom bar has no room for
@@ -145,7 +150,8 @@ function moreOpen() { if ($("#moresheet")) return moreClose(); const now = tab =
       shown(ROOMS.filter(r => r.fold)).map(r => row(r.id, r.name, r.says, () => goRoom(r.id), now === r)),
       el("div", { class: "grp" }, "Studio Vaults"),
       shown(ROOMS.filter(r => r.group === "vaults")).map(r => row(r.id, r.name, r.says, () => goRoom(r.id), now === r, r.key ? "⌥" + r.key : null)),
-      el("div", { class: "grp" }, "Studio"), row("search", "Search", "takes, settings and actions", palOpen, false, "⌘K"),
+      el("div", { class: "grp" }, "Studio"), row("search", "Search", "takes, settings, actions and every room", palOpen, false, "⌘K"),
+      typeof simpleOn === "function" ? row(simpleOn() ? "more" : "home", simpleOn() ? "All tools" : "Simple studio", simpleOn() ? "every room in the bar again: voice, music, film and the rest" : "only Home, Video, Image and Library", () => simpleSet(!simpleOn()), false) : null,
       row("update", "Updates", fresh ? "an update is ready to install" : (S && S.version ? "Studio " + S.version + " · " : "") + "check for a new version", () => go("Updates"), tab === "Updates")));
   document.body.append(sheet); const first = sheet.querySelector && sheet.querySelector("button"); if (first) first.focus(); return sheet; }
 function moreClose() { const s = $("#moresheet"); if (s) s.remove(); }
@@ -421,10 +427,11 @@ async function createQueue() { if (C.queuing) return; C.queuing = true; try { re
 async function createQueueNow() { try {
   const why = createNotReady(); if (why) return toast(why); if (loraWants().length) return toast("A Look needs something first: see Render");
   if (!C.promptEdited || !String(C.prompt || "").trim()) await composeCreate();
-  // a seed is drawn when a take is queued, not once when the page opens: with Settings' random seed, a seed that has
-  // already made a take is replaced by a new one, unless "Same seed every take" is ticked or the Sharp Spec (whose
-  // seed is part of the recipe) is chosen
-  if (!C.sameSeed && C.seedUsed === Number(C.seed) && !(typeof sharpOn === "function" && sharpOn()) && typeof prefs === "function" && prefs().presets.seed === "random" && typeof prefSeed === "function") C.seed = prefSeed();
+  // a seed that has already made a take is not used again unless "Same seed every take" is ticked or the Sharp Spec
+  // (whose seed is part of the recipe) is chosen: the next one follows it, or a new random one with Settings' random seed.
+  // The seed is drawn here, when the take is queued, not once when the page opens.
+  if (!C.sameSeed && C.seedUsed === Number(C.seed) && !(typeof sharpOn === "function" && sharpOn()))
+    C.seed = typeof prefs === "function" && prefs().presets.seed === "random" && typeof prefSeed === "function" ? prefSeed() : Number(C.seed) + 1;
   const base = { prompt: C.prompt, image: noFrame() ? null : C.image, ...(typeof prefs === "function" && !prefs().presets.qa_gate ? { qa: false } : {}), ...(lastOf() ? { last_image: lastOf() } : {}), preset: C.preset, quality: C.quality, seed: C.seed, ...extras(), ...(isRef() ? { references: C.refs, ref_turbo: C.refPasses === "4", ...(refMedia() ? { reference_videos: await motionVideos(), reference_audios: C.refAudios, reference_video_sound: C.video_sound, ...(motionFields() ? { motion: { pack: C.motion.pack, layer: C.motion.layer, mode: C.motion.mode, measured: C.motion.measured || null, free: motionFree() }, pace: C.motion.pace || "auto", silent: paceOf(C.motion) === "flow" && !musicNamed() } : {}) } : {}) } : {}), ...(C.silent ? { silent: true } : {}) };
   const j = await api("/api/jobs", isLong() ? { kind: "long", title: S.long[C.seconds] + ": " + (C.action || C.scene || "Video").slice(0, 40), params: { ...base, total_seconds: Number(C.seconds), beats: (C.beats || "").split("\n") } }
     : { kind: "video", title: (C.action || C.scene || "Clip").slice(0, 48), params: { ...base, ...lengthOf(C), ...(C.retake ? { retake: true } : {}) } });

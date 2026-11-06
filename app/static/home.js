@@ -82,7 +82,14 @@ const hcSongEngines = () => (S && S.music && S.music.engines) || null;
 const hcYue = () => { const e = hcSongEngines(); return !!(e && e.yue2 && (e.yue2.installed || e.yue2.available)); };
 const hcHas = id => id === "flux" ? !!hcFluxModel() : id === "yue" ? hcYue() : id !== "song" || !hcYue() || !hcSongEngines().music3 || !!hcSongEngines().music3.available;
 // Settings says the kind of take; the picture model and song engine it presets choose that kind's chip
-const hcMode = () => {
+// the simple studio (settings.js simpleOn): the composer makes clips and pictures; voice and songs are in their rooms, one ⌘K away
+const hcSimple = () => typeof simpleOn === "function" && simpleOn();
+const HC_SIMPLE = ["clip", "picture", "flux"];
+// one Picture chip in the simple studio: the model Settings › Presets names (FLUX3-K where that is it), else Qwen
+const hcPictureChip = () => /^flux/.test(homePrefs().presets.image_model || "") && hcHas("flux") ? "flux" : "picture";
+const hcShown = id => hcHas(id) && (!hcSimple() || id === "clip" || id === hcPictureChip());
+const hcMode = () => { const m = hcModeAny(); return !hcSimple() ? m : m === "picture" || m === "flux" ? hcPictureChip() : HC_SIMPLE.includes(m) ? m : "clip"; };
+const hcModeAny = () => {
   if (S && S.platform === "windows") { const mode = HC.mode || (HC_MODES[homePrefs().presets.mode] ? homePrefs().presets.mode : "clip");
     return (typeof capWhy === "function" ? capWhy : () => "")(hcKind(mode)) && mode !== "picture" ? "picture" : mode; }
   if (HC.mode && hcHas(HC.mode)) return HC.mode;
@@ -201,7 +208,7 @@ function homeComposer() {
   const recipes = HC_RECIPES(), ids = Object.keys(recipes), rec = hcRecipe();
   return el("div", { class: "cmp-wrap" }, el("section", { class: "composer", id: "composer" },
     el("div", { class: "cmp-head" },
-      el("div", { class: "cmp-modes", role: "tablist", "aria-label": "What to make" }, Object.entries(HC_MODES).filter(([id]) => hcHas(id)).map(([id, [label, mk, model]]) =>
+      el("div", { class: "cmp-modes", role: "tablist", "aria-label": "What to make" }, Object.entries(HC_MODES).filter(([id]) => hcShown(id)).map(([id, [label, mk, model]]) =>
         el("button", { type: "button", role: "tab", "data-mode": id, title: (typeof capWhy === "function" ? capWhy : () => "")(hcKind(id)) || label + " · " + model, disabled: !!(typeof capWhy === "function" ? capWhy : () => "")(hcKind(id)), "aria-selected": mode === id ? "true" : "false", class: "cmp-mode" + (mode === id ? " on" : ""), onclick: () => { HC.mode = id; render(); } },
           el("b", {}, label), S && S.platform === "windows" && id === "picture" ? "SD-Turbo" : typeof mark === "function" ? mark(mk, model) : model)))),
     area,
@@ -214,8 +221,8 @@ function homeComposer() {
       el("button", { type: "button", class: "primary cmp-go", title: (typeof capWhy === "function" ? capWhy : () => "")(hcKind(mode)), disabled: HC.busy || !!(typeof capWhy === "function" ? capWhy : () => "")(hcKind(mode)), onclick: () => hcGenerate() }, HC.busy ? "Queuing…" : "Generate", el("kbd", {}, "⌘↵"))),
     hcMade()),
     el("div", { class: "cmp-alt" }, el("span", { class: "cmp-hint" }, hint), el("span", { class: "su-grow" }),
-      el("button", { type: "button", class: "ghost small cmp-agent", onclick: hcAgent }, "Ask your agent instead"),
-      typeof suitePromptPicker === "function" ? el("button", { type: "button", class: "ghost small cmp-suite", onclick: () => suitePromptPicker(hcFromSuite) }, "From the suite") : null,
+      hcSimple() ? null : el("button", { type: "button", class: "ghost small cmp-agent", onclick: hcAgent }, "Ask your agent instead"),
+      typeof suitePromptPicker === "function" && !hcSimple() ? el("button", { type: "button", class: "ghost small cmp-suite", onclick: () => suitePromptPicker(hcFromSuite) }, "From the suite") : null,
       el("a", { href: "#Create", class: "cmp-more", onclick: e => { if (e.preventDefault) e.preventDefault(); hcMore(); } }, "More options →"))); }
 
 // Home, right of the composer: what is rendering now and what is next, then this machine in one card
@@ -239,7 +246,13 @@ function viewHome() {
   const main = el("div", { class: "home-main" },
     el("h1", { class: "home-ask" }, "What are we making?"),
     typeof connectNudge === "function" ? connectNudge("home") : null, homeComposer());
-  const starts = STARTS().filter(s => startShown(look, s.id));
+  const simple = hcSimple();
+  // the simple studio's Home: the box, what was just made and the recent takes; the rest is in its rooms
+  if (!simple) { let off = false; try { off = localStorage.getItem("simple-invite-off") === "1"; } catch {}
+    if (!off && typeof simpleSet === "function") put(main, el("div", { class: "note simple-invite" }, el("b", {}, "Too much here? "), "The simple studio shows only Home, Video, Image and Library; every other room stays one ⌘K away. ",
+      el("button", { type: "button", class: "small", onclick: () => simpleSet(true) }, "Try it"), " ",
+      el("button", { type: "button", class: "small ghost", onclick: () => { try { localStorage.setItem("simple-invite-off", "1"); } catch {} render(); } }, "Not now"))); }
+  const starts = simple ? [] : STARTS().filter(s => startShown(look, s.id));
   if (starts.length) put(main, el("div", { class: "sectionhead" }, el("h2", {}, "Start something"), el("span", { class: "note" }, "Each opens the full form with sensible settings.")),
     el("div", { class: "starts" }, starts.map(s => el("button", { type: "button", class: "start", "data-start": s.id, title: s.one, onclick: s.run }, icon(s.sign || "video", "ic"), el("span", { class: "t" }, el("b", {}, s.title), el("small", {}, s.one))))));
   put(main, el("div", { class: "sectionhead" }, el("h2", {}, "Recent takes"), el("a", { href: "#Library", onclick: e => { if (e.preventDefault) e.preventDefault(); go("Library"); } }, "Open Library →")), recent);
@@ -249,8 +262,10 @@ function viewHome() {
         : [el("button", { class: "small ghost", onclick: () => startCreate({ image: m.path, goes: "video", start: "own" }, 1) }, "Animate"),
           typeof qkOpen === "function" ? el("button", { class: "small ghost", title: "Change something in this picture (Quick Edit)", onclick: () => qkOpen(m.path) }, "Edit") : null])))
       : [el("div", { class: "note" }, "Nothing rendered yet. Your takes will line up here.")])); }).catch(() => recent.replaceChildren(el("div", { class: "note" }, "The Library could not be read.")));
-  if (typeof nightPanel === "function") put(main, el("div", { class: "sectionhead" }, el("h2", {}, "Night shift"), el("span", { class: "note" }, "A batch rendered while you sleep, with dailies in the morning.")), nightPanel());
-  put(main, el("div", { class: "sectionhead" }, el("h2", {}, "Wasserman's Filmmaker Suite"), el("a", { href: "#Import", onclick: e => { if (e.preventDefault) e.preventDefault(); go("Import"); } }, "The whole suite, built in →")),
+  if (simple) put(main, el("p", { class: "note home-simple" }, "Voice, music, film, motion graphics and the other rooms: Search (⌘K), or ",
+    el("button", { type: "button", class: "small ghost", onclick: () => simpleSet(false) }, "show all tools"), "."));
+  if (typeof nightPanel === "function" && !simple) put(main, el("div", { class: "sectionhead" }, el("h2", {}, "Night shift"), el("span", { class: "note" }, "A batch rendered while you sleep, with dailies in the morning.")), nightPanel());
+  if (!simple) put(main, el("div", { class: "sectionhead" }, el("h2", {}, "Wasserman's Filmmaker Suite"), el("a", { href: "#Import", onclick: e => { if (e.preventDefault) e.preventDefault(); go("Import"); } }, "The whole suite, built in →")),
     el("div", { class: "suiteRow" }, SUITE_APPS.map(([n, s]) => el("button", { class: "app", type: "button", title: s, onclick: () => go("Import") },
       el("img", { src: "art/suite/" + SUITE_SLUG[n] + ".webp", alt: "", width: 32, height: 32, loading: "lazy" }), el("b", {}, n)))));
   put(main, el("p", { class: "home-foot" }, "Imagination Studio by keys+Wasserman · ", el("span", { class: "home-links" }, HOME_LINKS.map(([label, url]) => el("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, label)))));
