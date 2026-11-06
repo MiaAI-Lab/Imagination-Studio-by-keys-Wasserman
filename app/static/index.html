@@ -205,6 +205,23 @@ function shapeNote() { const canvas = C.preset === "custom" ? [Number(C.cw), Num
   return el("div", { class: "note shape-off", style: "color:var(--warn)" }, "This picture is " + w + " × " + h + "; the clip starts at " + cw + " × " + ch + ", so it would be stretched " + Math.round(off * 100) + " %. ",
     el("button", { class: "small", disabled: !!C.fitting, title: "Keep the middle of the picture at the clip's shape (nothing is scaled or redrawn); the rest is cut off", onclick: fit }, "Crop it to fit"),
     w < h ? " A portrait picture loses most of its height: a 16:9 picture works better." : ""); }
+// Several actions in one shot follow better at 20 passes (AGENTS.md; FastH3's "for prompts with several actions"): a
+// suggestion with one click under the action, never a change made for the user. Counted from the sentences and "then"s
+const actionCount = t => String(t || "").split(/(?<=[.!?])\s+|\bthen\b|;|,\s/i).filter(x => /[a-z]{2}/i.test(x)).length;
+const passesHintOn = () => C.engine === "fasth3" && !isRef() && !customOn() && C.passes !== "20" && actionCount(C.action) >= 3;
+function passesHint() { const n = el("div", { class: "note passes-hint", style: passesHintOn() ? "" : "display:none" }, "Several actions in this shot: 20 passes follow them better (about twice the time of 8). ",
+  el("button", { type: "button", class: "small", onclick: () => { C.passes = "20"; C.steps = ""; changed(); } }, "Use 20 passes")); PASSHINT.node = n; return n; }
+const PASSHINT = { node: null };
+const passesHintPaint = () => { if (PASSHINT.node && PASSHINT.node.style) PASSHINT.node.style.display = passesHintOn() ? "" : "none"; };
+// which picture model did better for this kind of picture in docs/picture-shootout.md, when it is installed and not the
+// one chosen: a hint with one click; the choice stays the user's
+const SHOOTOUT = [[/\b(portrait|face|headshot|close-?up of (a|her|his)|poster|title card|lettering|logo)\b|"[^"]{2,}"/i, "qwen-full", "faces, portraits and posters"],
+  [/\b(crowd|crowded|market|busy street|watercolou?r|illustration|painting|drawn|hands?|fingers|piano)\b/i, "flux3k-full", "crowded scenes, illustration and hands"]];
+function modelHint() { const text = C.scene || "", have = imageModels().map(m => m.id), now = imageModel();
+  const hit = SHOOTOUT.find(([re, id]) => re.test(text) && have.includes(id) && id !== now); if (!hit) return null;
+  const m = imageModels().find(x => x.id === hit[1]);
+  return el("div", { class: "note model-hint" }, "For " + hit[2] + ", " + m.label + " did better in the studio's picture shootout (slower). ",
+    el("button", { type: "button", class: "small", onclick: () => { C.imageModel = hit[1]; render(); } }, "Use " + m.label)); }
 // the scout step's picture prompt box and Make scouts, kept so typing can update them without a redraw
 const SCOUT_UI = { area: null, make: null, queuing: false, paint() { if (SCOUT_UI.make) SCOUT_UI.make.disabled = !String(C.imagePrompt || "").trim(); } };
 const sceneTyped = () => { if (C.mode === "scout" && !C.imagePromptEdited) { C.imagePrompt = C.scene; if (SCOUT_UI.area) SCOUT_UI.area.value = C.scene; } SCOUT_UI.paint(); };
@@ -681,7 +698,7 @@ function viewCreate() {
     const made = C.imageJob && jobs.find(j => j.id === C.imageJob);
     if (S.windows_stills && S.windows_stills.available) C.imageSize = "512x512";
     const [w, h] = C.imageSize.split("x").map(Number);
-    put(body, el("h2", {}, "The picture"), goes, picture, imageModelPick(),
+    put(body, el("h2", {}, "The picture"), goes, picture, imageModelPick(), modelHint(),
       el("label", {}, "Size"), choice(C, "imageSize", S.windows_stills && S.windows_stills.available ? { "512x512": ["Storyboard draft", "512 × 512 square"] }
         : { "1344x768": ["16:9", "1344 × 768"], "1664x928": ["16:9 large", "1664 × 928"], "1024x1024": ["Square", "1024 × 1024"], "768x1344": ["9:16", "768 × 1344"] }, render, true),
       el("div", { class: "row" },
@@ -712,7 +729,8 @@ function viewCreate() {
       el("label", {}, "The clip starts from"), choice(C, "start", { text: ["Text only", "no first frame"], scout: ["Pictures to choose from", "make a few with " + imageModelName() + ", pick one"], own: ["Your own image", "upload a picture"],
         ...(S.ref2va ? { refs: S.ref_media ? ["References", "pictures, videos or audio: keep a face, a motion or a voice"] : ["Reference pictures", "keep a face or a thing, in a new scene"] } : {}) }, changed),
       picture,
-      field("What happens to the characters inside the scene / clip", bind(C, "action", el("textarea", { placeholder: "He lifts the loaf with both hands, sets it down, looks at the camera and smiles." }))),
+      field("What happens to the characters inside the scene / clip", bind(C, "action", el("textarea", { placeholder: "He lifts the loaf with both hands, sets it down, looks at the camera and smiles." }), () => passesHintPaint())),
+      passesHint(),
       field("Camera (optional)", bind(C, "camera", el("input", { placeholder: "The camera slowly pushes in throughout the single continuous shot." }))),
       isLong() ? field("Story beats (optional): one line per 15 s clip, in order; the last line holds for the rest", bind(C, "beats", el("textarea", { placeholder: "He rides down the chute.\nHe stops at the river and looks back.\nHe wades across carrying the bike." }))) : null,
       isLong() ? el("div", { class: "note" }, "The model makes at most 15 s at a time, so this is rendered as " + Math.ceil(C.seconds / 15) + " clips, each opening on the last frame of the one before, then joined. Finished clips appear in the queue as they land. Expect the look to drift over many clips; beats help it stay on a story.") : null);
