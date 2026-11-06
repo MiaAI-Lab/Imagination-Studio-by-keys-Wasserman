@@ -1266,3 +1266,17 @@ def test_the_simple_studio_shows_the_rooms_that_make_pictures_and_clips():
     assert out["saved"] == {"layout": {"simple": False}}
     assert "library" not in out["full"] and "sound" in out["full"]  # the owner's own layout comes back
     assert "Too much here?" in out["fullHome"] and "Start something" in out["fullHome"]
+
+
+def test_higher_quality_sends_the_same_take_at_the_final_recipe():
+    out = run("""answers["/api/jobs"] = { id: "f1", title: "Final: A gull" };
+      const body = { kind: "video", title: "A gull", params: { prompt: "p", image: "scouts/a.png", preset: "small", quality: "fh4", seed: 9, seconds: 5, width: 864, height: 480, steps: 6, retake: true } };
+      out.ask = betterAsk(body);
+      out.none = [betterAsk({ ...body, params: { ...body.params, preset: "p720", quality: "fh8" } }), betterAsk({ ...body, params: { ...body.params, references: ["a.png"] } }), betterAsk({ kind: "long", params: {} })];
+      let got = null; await betterQueue(body, (j, ask) => { got = [j.id, ask.params.preset]; }); out.got = got;
+      out.sent = calls.filter(c => c[0] === "/api/jobs").length;""")
+    ask = out["ask"]
+    assert ask["params"] == {"prompt": "p", "image": "scouts/a.png", "preset": "p720", "quality": "fh8", "seed": 9, "seconds": 5}  # Final on a Spark; the rest as it was
+    assert ask["title"] == "Final: A gull"
+    assert out["none"] == [None, None, None]  # already Final, a reference clip, a long take
+    assert out["got"] == ["f1", "p720"] and out["sent"] == 1

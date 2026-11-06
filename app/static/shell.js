@@ -434,7 +434,21 @@ async function createQueueNow() { try {
   const base = { prompt: C.prompt, image: noFrame() ? null : C.image, ...(typeof prefs === "function" && !prefs().presets.qa_gate ? { qa: false } : {}), ...(lastOf() ? { last_image: lastOf() } : {}), preset: C.preset, quality: C.quality, seed: C.seed, ...extras(), ...(isRef() ? { references: C.refs, ref_turbo: C.refPasses === "4", ...(refMedia() ? { reference_videos: await motionVideos(), reference_audios: C.refAudios, reference_video_sound: C.video_sound, ...(motionFields() ? { motion: { pack: C.motion.pack, layer: C.motion.layer, mode: C.motion.mode, measured: C.motion.measured || null, free: motionFree() }, pace: C.motion.pace || "auto", silent: paceOf(C.motion) === "flow" && !musicNamed() } : {}) } : {}) } : {}), ...(C.silent ? { silent: true } : {}) };
   const j = await api("/api/jobs", isLong() ? { kind: "long", title: S.long[C.seconds] + ": " + (C.action || C.scene || "Video").slice(0, 40), params: { ...base, total_seconds: Number(C.seconds), beats: (C.beats || "").split("\n") } }
     : { kind: "video", title: (C.action || C.scene || "Clip").slice(0, 48), params: { ...base, ...lengthOf(C), ...(C.retake ? { retake: true } : {}) } });
+  C.asked = { id: j.id, body: JSON.parse(JSON.stringify(isLong() ? {} : { kind: "video", title: (C.action || C.scene || "Clip").slice(0, 48), params: { ...base, ...lengthOf(C) } })) };
   C.job = j.id; C.seedUsed = Number(C.seed); toast("Queued: " + j.title + " · seed " + C.seed); await poll(); render(); } catch (e) { toast(e.message); } }
+// Higher quality: the request that made a single clip, sent again with the Final recipe (its size and passes) and
+// everything else as it was, the seed too. A new render: the motion may differ. Not for reference clips (their passes
+// are their own), long takes, or a take that already was Final. null when it does not apply
+function betterAsk(body) { if (!body || body.kind !== "video" || !body.params || typeof recipeParams !== "function") return null;
+  const p = body.params, r = recipeParams("final");
+  if (p.references || p.reference_videos || p.reference_audios || (p.preset === r.preset && p.quality === r.quality)) return null;
+  const out = JSON.parse(JSON.stringify(body)); delete out.params.width; delete out.params.height; delete out.params.steps; delete out.params.retake;
+  Object.assign(out.params, { preset: r.preset, quality: r.quality }); out.title = "Final: " + String(body.title || "Clip").replace(/^Final: /, "");
+  return out; }
+async function betterQueue(body, after) { const ask = betterAsk(body); if (!ask || C.betterBusy) return; C.betterBusy = true;
+  try { const j = await api("/api/jobs", ask); toast("Queued: " + j.title + " (a new render at the Final recipe; the motion may differ)"); if (after) after(j, ask); await poll(); }
+  catch (e) { toast(e.message, 6000); } finally { C.betterBusy = false; render(); } }
+const betterButton = (body, after) => betterAsk(body) ? el("button", { class: "small", type: "button", title: "The same words, picture, length and seed at the Final recipe: a new render, so the motion may differ (Upscale keeps the take itself)", onclick: () => betterQueue(body, after) }, "Higher quality") : null;
 // Another take: queued at once with the next seed (the shot check's own retake rule), or the same one when asked for
 // (the next seed wins over Settings' random seed here: a retake follows on from the take it repeats)
 function createAgain() { if (C.queuing) return; if (!C.sameSeed) C.seed = (Number(C.seed) || 0) + 1; return createQueue(); }

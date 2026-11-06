@@ -198,6 +198,7 @@ function hcMade() { if (!HC.made.length) return null;
     return el("div", { class: "tile", "data-made": m.id }, shown || el("div", { class: "cmp-wait" }, el("span", { class: "pill " + j.status }, j.status)),
       el("div", { class: "cap" }, el("span", {}, m.title), out ? el("button", { class: "small", onclick: () => go("Library") }, "Open") : null,
         out && /\.(png|jpe?g|webp)$/i.test(out) ? hcPictureActs(out) : null, clip && typeof qkFrameButton === "function" ? qkFrameButton(out, shown) : null,
+        clip && m.request && typeof betterButton === "function" ? betterButton(m.request[1], (job, ask) => { HC.made.unshift({ ...m, id: job.id, title: job.title || ask.title, request: ["/api/jobs", ask] }); HC.made = HC.made.slice(0, 12); }) : null,
         el("button", { class: "small", disabled: !["done", "failed", "cancelled"].includes(j.status), onclick: () => hcGenerate(m) }, "Retake"))); }))); }
 function homeComposer() {
   const mode = hcMode(), [, , , hint] = HC_MODES[mode];

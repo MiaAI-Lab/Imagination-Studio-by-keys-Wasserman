@@ -823,7 +823,9 @@ function viewCreate() {
       const player = el("video", { class: "main", src: file(job.outputs[0]), controls: true }), clip = { kind: "video", path: job.outputs[0] };
       // what follows a clip, under it: a frame to edit, carry it on, a new look, one change, larger
       const nextActs = job.kind !== "video" ? null : el("div", { class: "row next-acts", style: "margin-top:8px" },
-        typeof qkFrameButton === "function" ? qkFrameButton(clip.path, player) : null, typeof revButtons === "function" ? revButtons(clip) : null,
+        typeof qkFrameButton === "function" ? qkFrameButton(clip.path, player) : null,
+        typeof betterButton === "function" && C.asked && C.asked.id === job.id ? betterButton(C.asked.body, (j, ask) => { C.job = j.id; C.asked = { id: j.id, body: ask }; }) : null,
+        typeof revButtons === "function" ? revButtons(clip) : null,
         typeof actOf === "function" && actOf("upscale").ready ? el("button", { class: "small", title: "Make this clip larger and sharper (the Library's Upscale): the take itself is kept", onclick: () => actOpen("upscale", clip.path) }, "Upscale") : null, el("span"));
       if (job.status === "done") put(body, player, nextActs,
         el("div", { class: "row", style: "margin-top:8px" }, el("button", { class: "fit", onclick: () => addToTimeline(job.outputs[0]) }, "Add to the editor timeline"), el("a", { class: "fit", href: file(job.outputs[0]), download: "" }, "Download"),
