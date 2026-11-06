@@ -157,10 +157,11 @@ const C = { step: 0, mode: "scout", preset: "draft", quality: "standard", second
 // Change something in the first frame, where it is: Quick Edit's job (a new seed, the picture's own size, the model's own
 // settings) on C.image; the result is offered with "Use this version", and the picture it replaced comes back with Undo
 const FX = { prompt: "", job: null, from: null, busy: false, undo: null };
-function frameChange() {
-  if (typeof qkModel !== "function" || (typeof capWhy === "function" && capWhy("edit"))) return null;
+function frameChange() { const undo = FX.undo && FX.undo !== C.image && FX.undoFor === C.image
+    ? el("div", { class: "row", style: "margin-top:6px" }, el("button", { class: "small ghost", onclick: () => { C.image = FX.undo; FX.undo = null; C.prompt = ""; render(); } }, "Undo: back to the picture before"), el("span")) : null;
+  if (typeof qkModel !== "function" || (typeof capWhy === "function" && capWhy("edit"))) return undo;
   if (typeof QK !== "undefined" && !QK.state && !FX.loading && typeof qkLoad === "function") { FX.loading = true; qkLoad().then(() => { FX.loading = false; if (tab === "Create") render(); }); }
-  if (!(QK.state && QK.state.ready)) return null;
+  if (!(QK.state && QK.state.ready)) return undo;
   const job = FX.job && jobs.find(j => j.id === FX.job), made = job && job.status === "done" && (job.outputs || [])[0];
   const go = async () => { const prompt = FX.prompt.trim(); if (!prompt) return toast("Say what changes in the picture"); if (FX.busy) return; FX.busy = true; render();
     try { const j = await api("/api/jobs", { kind: "edit", title: "Quick edit: " + prompt.slice(0, 40), params: { image: C.image, prompt, seed: Math.floor(Math.random() * 2147483647) || 1, size: "source", image_model: qkModel() } });
@@ -172,8 +173,8 @@ function frameChange() {
   if (job && job.status !== "done") out.push(el("div", { class: "note" }, el("span", { class: "pill " + job.status }, job.status), job.status === "failed" ? " " + String(job.error || "").slice(0, 200) : " the edit is on its way"));
   if (made && FX.from === C.image && made !== C.image) out.push(el("div", { class: "row", style: "margin-top:8px;align-items:flex-end" },
     el("div", { class: "fit", style: "width:220px" }, media(made, { style: "width:100%;border-radius:8px" })),
-    el("button", { class: "fit primary", onclick: () => { FX.undo = C.image; C.image = made; C.prompt = ""; render(); } }, "Use this version"), el("span")));
-  if (FX.undo && FX.undo !== C.image && made === C.image) out.push(el("div", { class: "row", style: "margin-top:6px" }, el("button", { class: "small ghost", onclick: () => { C.image = FX.undo; FX.undo = null; C.prompt = ""; render(); } }, "Undo: back to the picture before"), el("span")));
+    el("button", { class: "fit primary", onclick: () => { FX.undo = C.image; FX.undoFor = made; C.image = made; C.prompt = ""; render(); } }, "Use this version"), el("span")));
+  if (undo) out.push(undo);
   return out; }
 // a reference's tag put where the cursor is: in the scene, action or camera box last typed in (else the action box).
 // The words around it are the user's own and stay as typed; nothing else is written into them
@@ -187,6 +188,23 @@ function refInsert(tag) { let n = REFCARET.node; if (!n || !n.isConnected) n = [
   n.value = before + pad + tag + n.value.slice(end); const caret = (before + pad + tag).length;
   n.focus(); if (n.setSelectionRange) n.setSelectionRange(caret, caret); n.dispatchEvent(new Event("input", { bubbles: true })); C.prompt = ""; }
 const refChip = tag => el("button", { type: "button", class: "small ghost refchip", title: "Put " + tag + " where the cursor is in the scene, action or camera", onmousedown: e => e.preventDefault(), onclick: e => { e.stopPropagation(); refInsert(tag); } }, "Insert");
+// A first frame is stretched onto the canvas the clip starts from (the preset's start, scouts' size). When the picture's
+// shape is more than 2 % off, the page says how and offers the renderer's own centre crop (/api/fit) in one click
+const SHAPES = {};
+function pictureShape(path) { if (SHAPES[path] || typeof Image === "undefined") return SHAPES[path] || null;
+  SHAPES[path] = "loading"; const img = new Image(); img.onload = () => { SHAPES[path] = [img.naturalWidth, img.naturalHeight]; if (tab === "Create") render(); };
+  img.onerror = () => { SHAPES[path] = null; }; img.src = file(path); return null; }
+function shapeNote() { const canvas = C.preset === "custom" ? [Number(C.cw), Number(C.ch)] : ((S.presets[C.preset] || {}).start || (output() || {}).size);
+  const shape = C.image && pictureShape(C.image);
+  if (!canvas || !Array.isArray(shape)) return el("div", { class: "note" }, "The picture is fitted to the clip's canvas by stretching, so a picture of the clip's shape works best.");
+  const [w, h] = shape, [cw, ch] = canvas, off = Math.abs((w / h) / (cw / ch) - 1);
+  if (off <= 0.02) return el("div", { class: "note" }, "The picture has the clip's shape (" + w + " × " + h + " for a " + cw + " × " + ch + " start).");
+  const fit = async () => { if (C.fitting) return; C.fitting = true; render();
+    try { const r = await api("/api/fit", { path: C.image, width: cw, height: ch }); FX.undo = C.image; FX.undoFor = r.path; C.image = r.path; C.prompt = ""; toast("Cut about its centre to the clip's shape: Undo is under the picture"); }
+    catch (e) { toast(e.message); } finally { C.fitting = false; render(); } };
+  return el("div", { class: "note shape-off", style: "color:var(--warn)" }, "This picture is " + w + " × " + h + "; the clip starts at " + cw + " × " + ch + ", so it would be stretched " + Math.round(off * 100) + " %. ",
+    el("button", { class: "small", disabled: !!C.fitting, title: "Keep the middle of the picture at the clip's shape (nothing is scaled or redrawn); the rest is cut off", onclick: fit }, "Crop it to fit"),
+    w < h ? " A portrait picture loses most of its height: a 16:9 picture works better." : ""); }
 // the scout step's picture prompt box and Make scouts, kept so typing can update them without a redraw
 const SCOUT_UI = { area: null, make: null, queuing: false, paint() { if (SCOUT_UI.make) SCOUT_UI.make.disabled = !String(C.imagePrompt || "").trim(); } };
 const sceneTyped = () => { if (C.mode === "scout" && !C.imagePromptEdited) { C.imagePrompt = C.scene; if (SCOUT_UI.area) SCOUT_UI.area.value = C.scene; } SCOUT_UI.paint(); };
@@ -772,7 +790,7 @@ function viewCreate() {
       } else put(body, field("Upload an image", up), clipFrames(p => { C.image = p; C.prompt = ""; }, "Or continue from a clip in the Library"));
       if (C.mode !== "scout" && C.image && C.image.startsWith("scouts/")) put(body, el("div", { class: "note" }, "Using the image you chose to animate."));
       if (C.image) put(body, el("h3", {}, "Selected first frame"), el("div", { style: "max-width:420px" }, media(C.image, { style: "width:100%;border-radius:8px" })), frameChange(),
-        el("div", { class: "note" }, "The image is stretched onto the clip's canvas, so match its aspect ratio (16:9 for the presets here)."));
+        shapeNote());
       // the end frame is optional: folded, as for a clip from text, and open while one is chosen
       put(body, el("details", { class: "fold", open: !!lastOf() || !!C.openLast, ontoggle: e => { C.openLast = e.target.open; } }, el("summary", {}, "End on a picture (optional)" + (C.lastImage ? ": chosen" : "")), lastFramePanel()));
     }
