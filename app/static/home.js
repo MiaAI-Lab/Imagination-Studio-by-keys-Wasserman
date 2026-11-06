@@ -193,10 +193,11 @@ const hcPictureActs = path => [el("button", { class: "small", title: "A clip tha
   typeof qkOpen === "function" ? el("button", { class: "small", title: "Change something in this picture (Quick Edit)", onclick: () => qkOpen(path) }, "Edit") : null];
 function hcMade() { if (!HC.made.length) return null;
   return el("div", { class: "cmp-made" }, el("span", { class: "eyebrow" }, "Just made"), el("div", { class: "strip2" }, HC.made.map(m => { const j = jobs.find(x => x.id === m.id) || { status: "queued" };
-    const out = (j.outputs || []).find(o => !/sheet\.jpg$/.test(o));
-    return el("div", { class: "tile", "data-made": m.id }, out ? media(out, /\.(mp4|mov)$/i.test(out) ? { controls: true, muted: true, playsinline: true } : {}) : el("div", { class: "cmp-wait" }, el("span", { class: "pill " + j.status }, j.status)),
+    const out = (j.outputs || []).find(o => !/sheet\.jpg$/.test(o)), clip = out && /\.(mp4|mov)$/i.test(out);
+    const shown = out ? media(out, clip ? { controls: true, muted: true, playsinline: true } : {}) : null;
+    return el("div", { class: "tile", "data-made": m.id }, shown || el("div", { class: "cmp-wait" }, el("span", { class: "pill " + j.status }, j.status)),
       el("div", { class: "cap" }, el("span", {}, m.title), out ? el("button", { class: "small", onclick: () => go("Library") }, "Open") : null,
-        out && !/\.(mp4|mov)$/i.test(out) ? hcPictureActs(out) : null,
+        out && /\.(png|jpe?g|webp)$/i.test(out) ? hcPictureActs(out) : null, clip && typeof qkFrameButton === "function" ? qkFrameButton(out, shown) : null,
         el("button", { class: "small", disabled: !["done", "failed", "cancelled"].includes(j.status), onclick: () => hcGenerate(m) }, "Retake"))); }))); }
 function homeComposer() {
   const mode = hcMode(), [, , , hint] = HC_MODES[mode];

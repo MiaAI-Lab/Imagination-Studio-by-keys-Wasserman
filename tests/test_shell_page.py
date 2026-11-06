@@ -1225,6 +1225,14 @@ def test_home_pictures_offer_animate_and_edit():
     assert out["animate"] == ["Create", "scouts/p1/s1.png", "own", "video"]
 
 
+def test_a_clip_just_made_on_home_offers_edit_this_frame():
+    out = run("""answers["/api/library"] = [];
+      HC.made = [{ id: "v1", mode: "clip", text: "A gull", seed: 3, title: "A gull" }];
+      jobs = [{ id: "v1", status: "done", outputs: ["clips/v1.mp4"] }];
+      out.made = text(hcMade());""")
+    assert "Edit this frame" in out["made"] and "Retake" in out["made"]
+
+
 def test_create_draws_a_new_seed_for_another_take_unless_asked_for_the_same():
     out = run("""answers["/api/compose"] = { prompt: "integrated_multimodal_description: [Shot 1] A lighthouse." }; answers["/api/jobs"] = { id: "c1", title: "A lighthouse" };
       globalThis.noFrame = () => true; globalThis.lastOf = () => null; globalThis.extras = () => ({}); globalThis.lengthOf = () => ({ seconds: 5 }); globalThis.loraWants = () => [];

@@ -16,6 +16,11 @@ async function qkTake(file) { if (!qkPicture(file)) return toast("Paste or drop 
     QK.image = /\.(mp4|mov)$/i.test(j.path) ? (await api("/api/frame", { path: j.path, at: "first" })).path : j.path; QK.picking = false; render(); } catch (e) { toast(e.message); } }
 // Edit on any picture in the studio: Quick Edit opens with it loaded, ready for the words
 function qkOpen(path) { QK.image = path; QK.prompt = ""; QK.picking = false; if (typeof go === "function") go("Quick Edit"); else { tab = "Quick Edit"; render(); } }
+// Edit this frame: a still of the frame a clip is showing (its player's time, else the first) opened in Quick Edit. The
+// clip itself is not changed; the edited still can open a new clip (Make a clip of it)
+async function qkFrame(path, player) { const t = player && Number.isFinite(player.currentTime) ? player.currentTime : 0, at = t > 0.05 ? Math.round(t * 100) / 100 : "first";
+  try { const r = await api("/api/frame", { path, at }); qkOpen(r.path); toast("A still of " + (at === "first" ? "the first frame" : at + " s") + " to edit: the clip itself is not changed"); } catch (e) { toast(e.message); } }
+const qkFrameButton = (path, player, cls) => el("button", { class: cls || "small", type: "button", title: "Edit a still of the frame the clip is showing (pause where you want it); the clip itself is not changed", onclick: () => qkFrame(path, typeof player === "function" ? player() : player) }, "Edit this frame");
 // ⌘V / Ctrl+V anywhere on the page while Quick Edit is open: a picture on the clipboard becomes the picture to edit
 function qkPaste(e) { if (tab !== "Quick Edit" || !e.clipboardData) return; const f = [...(e.clipboardData.files || [])].find(qkPicture); if (!f) return; e.preventDefault(); qkTake(f); }
 if (typeof document !== "undefined" && typeof document.addEventListener === "function") document.addEventListener("paste", qkPaste);

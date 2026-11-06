@@ -128,3 +128,14 @@ def test_edit_elsewhere_opens_quick_edit_and_more_tools_carries_the_edit_over():
       const page = viewQuick(); button(page, "More tools").attrs.onclick(); out.more = [tab, ED.image, ED.prompt, ED.model];""")
     assert out["opened"] == ["Quick Edit", "scouts/a/s1.png"]
     assert out["more"] == ["Create", "scouts/a/s1.png", "make it night", "flux3k-fast"]
+
+
+def test_edit_this_frame_takes_the_frame_the_player_shows_into_quick_edit():
+    out = run("""answers["/api/frame"] = { path: "uploads/clip_at.jpg" }; tab = "Library";
+      const b = qkFrameButton("clips/a.mp4", { currentTime: 2.345 }); await b.attrs.onclick(); await settle();
+      out.at = calls.filter(c => c[0] === "/api/frame").slice(-1)[0][1]; out.opened = [tab, QK.image]; out.said = toasts.slice(-1)[0];
+      await qkFrameButton("clips/a.mp4", { currentTime: 0 }).attrs.onclick(); await settle();
+      out.first = calls.filter(c => c[0] === "/api/frame").slice(-1)[0][1];""")
+    assert out["at"] == {"path": "clips/a.mp4", "at": 2.35}
+    assert out["opened"] == ["Quick Edit", "uploads/clip_at.jpg"] and "not changed" in out["said"]
+    assert out["first"] == {"path": "clips/a.mp4", "at": "first"}
