@@ -102,7 +102,7 @@ Upstream's README is not copied. `tests/test_tutorial_lessons.py` checks the Cha
 Restarts the Studio's systemd user service and waits until the app answers again. It refuses while a job is queued or
 running unless given `--force`.
 
-### 7. The simple studio and fewer steps to a picture or clip (branch `feat/easy-create`)
+### 7. The simple studio and fewer steps to a picture or clip
 
 - **The simple studio.** A new studio opens with Home, Video, Image and Library only. One switch shows every room;
   `app/settings.py` `layout.simple`.
