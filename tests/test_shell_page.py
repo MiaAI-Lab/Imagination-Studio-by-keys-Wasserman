@@ -1268,6 +1268,14 @@ def test_the_simple_studio_shows_the_rooms_that_make_pictures_and_clips():
     assert "Too much here?" in out["fullHome"] and "Start something" in out["fullHome"]
 
 
+def test_the_simple_studio_opens_video_and_image_on_create():
+    out = run("""SET.data = { layout: { hidden: [], order: [], simple: true } };
+      tab = "Home"; goRoom("image"); out.image = [tab, C.goes]; goRoom("video"); out.video = [tab, C.goes];
+      SET.data = { layout: { simple: false } }; goRoom("image"); out.full = tab;""")
+    assert out["image"] == ["Create", "image"] and out["video"] == ["Create", "video"]
+    assert out["full"] == "Image"  # every room: the overview first, as before
+
+
 def test_higher_quality_sends_the_same_take_at_the_final_recipe():
     out = run("""answers["/api/jobs"] = { id: "f1", title: "Final: A gull" };
       const body = { kind: "video", title: "A gull", params: { prompt: "p", image: "scouts/a.png", preset: "small", quality: "fh4", seed: 9, seconds: 5, width: 864, height: 480, steps: 6, retake: true } };

@@ -692,7 +692,7 @@ function viewCreate() {
   body.setAttribute("data-clear", "create-" + C.step);
   sync();
   const goes = null;  // what the prompt goes to is chosen over the form (intentBar in shell.js)
-  const picture = field("Describe the scene / condition where it takes place", bind(C, "scene", el("textarea", { "data-ref": "scene", placeholder: isRef() ? "The woman with red hair sits at a wooden desk in a small radio studio at night, medium close-up, a warm lamp on the left." : "A middle-aged baker in a cream shirt and green apron behind a wooden counter in a small bakery at dawn, warm window light from the left…" }), sceneTyped));
+  const picture = field(C.goes === "image" ? "Describe the picture: the subject, the place, the light" : "Describe the scene / condition where it takes place", bind(C, "scene", el("textarea", { "data-ref": "scene", placeholder: isRef() ? "The woman with red hair sits at a wooden desk in a small radio studio at night, medium close-up, a warm lamp on the left." : "A middle-aged baker in a cream shirt and green apron behind a wooden counter in a small bakery at dawn, warm window light from the left…" }), sceneTyped));
   if (C.mode === "edit") return viewEdit(goes);  // a picture re-drawn by the image model (edit.js)
   if (C.mode === "image") {
     // the prompt goes to the image model and stops there

@@ -99,7 +99,12 @@ function goBack() { const h = SHELL.history; while (h.length && (h[h.length - 1]
   if (state && state.from === prev && typeof history.back === "function") return history.back();
   h.pop(); go(prev, { back: true }); }
 function goHome() { if (tab !== "Home") go("Home"); }
-function goRoom(id) { const r = ROOMS.find(x => x.id === id); if (r) go(r.tabs[0]); }
+// the simple studio opens Video and Image on Create itself (their overview stays the first tab); the other rooms on their first tab
+function goRoom(id) { const r = ROOMS.find(x => x.id === id); if (!r) return;
+  if ((id === "video" || id === "image") && typeof simpleOn === "function" && simpleOn() && typeof C !== "undefined" && TABS.includes("Create")) {
+    if (C.goes !== id) { C.goes = id; C.step = 0; if (id === "video" && !C.start) C.start = "text"; if (typeof sync === "function") sync(); C.prompt = ""; }
+    return go("Create"); }
+  go(r.tabs[0]); }
 function capWhy(kind) { if (!kind || !S || S.platform !== "windows") return "";
   const c = (S.capabilities || {})[kind];
   return c && c.available ? "" : c && c.why || "This action is not qualified in the Windows preview."; }
