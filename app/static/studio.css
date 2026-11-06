@@ -104,15 +104,6 @@ nav#rooms button .live { position:absolute; left:22px; top:6px; width:6px; heigh
 #plat:empty { display:none; }
 .machinepill .txt { color:var(--faint); margin-left:auto; font:400 12px var(--mono); }
 .machinepill.warn::after { content:""; position:absolute; top:6px; right:6px; width:6px; height:6px; border-radius:50%; background:var(--warn); }
-.verline { display:flex; align-items:center; gap:8px; padding:0 4px; }
-#ver { font:400 12px var(--sans); color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
-.verline button { padding:0 10px; font-size:13px; height:28px; min-height:0; }
-.verline button svg { width:13px; height:13px; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
-.verline button.has { border-color:var(--amber); color:var(--accent-text); }
-.credit { display:flex; align-items:center; gap:6px; padding:0 4px; font-size:12px; color:var(--faint); }
-.credit .tf { display:inline-flex; align-items:center; gap:5px; }
-.credit .tf img { display:block; height:auto; }
-.credit .tf .sym { width:20px; }
 
 /* ---------- the top bar: where you are, and the room's own tabs ---------- */
 header#top { position:sticky; top:0; z-index:30; height:var(--head); display:flex; align-items:stretch; gap:4px; padding:0 var(--gut);
@@ -562,15 +553,13 @@ aside#bay .pill.running::before { animation:tally 1.2s ease-in-out infinite; }
 @media (max-width:1099px) {
   :root { --side:64px; --gut:24px; }
   aside#side { padding:14px 10px; align-items:center; }
-  .brand { padding:2px 0 14px; } .brand .names, .credit { display:none; }
+  .brand { padding:2px 0 14px; } .brand .names { display:none; }
   .kbtn { width:44px; justify-content:center; padding:0; } .kbtn span, .kbtn kbd { display:none; }
   nav#rooms { align-items:center; margin:0; padding:0; }
   nav#rooms .grp { font-size:0; padding:10px 0 8px; width:32px; } nav#rooms .grp::after { content:""; display:block; height:1px; background:var(--line2); }
   nav#rooms button { width:44px; height:40px; justify-content:center; padding:0; } nav#rooms button .lbl, nav#rooms button .kbd { display:none; }
   nav#rooms button .live { left:auto; right:8px; }
   .sidefoot { align-items:center; padding:10px 6px; } .machinepill { width:44px; justify-content:center; padding:0; } .machinepill #plat, .machinepill .txt { display:none; }
-  .verline { flex-direction:column; } #ver { display:none; } .verline button .t { display:none; } .verline button { width:44px; height:32px; padding:0; display:flex; align-items:center; justify-content:center; }
-  .verline button svg { width:16px; height:16px; }
   .cards.c4 { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .cols, .tut, .split { grid-template-columns:minmax(0,1fr); } .tut > :last-child { order:-1; }
   .mgrid { grid-template-columns:minmax(0,1fr) !important; } .tri, .quad, .cards.c3 { grid-template-columns:repeat(2,minmax(0,1fr)); }

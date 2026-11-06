@@ -28,8 +28,8 @@ texture, serif display titles, capitalised mono labels, the cover picture on eve
   and a sun/moon button in the top bar switches between light and dark. Settings › Appearance shows them as cards,
   each with a small picture of the studio, and the accent as swatches. `app/settings.py` takes
   `studio | light | oled | system`.
-- **Sidebar and top bar.** A compact mark and name, search under it, plain room groups, the machine card, and
-  "Powered by TensorFold". The room's own tabs sit in the top bar with an accent underline.
+- **Sidebar and top bar.** A compact mark and name, search under it, plain room groups, and the machine card
+  (no version line or "Powered by" line under it: Updates is in Machine, the credit in Settings › Credits). The room's own tabs sit in the top bar with an accent underline.
 - **Home.** "What are we making?" leads the page:
   - the kinds of take as tabs over the box, then one bar with recipe, length, estimate and Generate
   - quick starts, and a grid of recent takes

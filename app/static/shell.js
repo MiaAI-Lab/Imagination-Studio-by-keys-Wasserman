@@ -344,7 +344,6 @@ function shellStart() {
     warning.textContent = [S.platform_note, S.ffmpeg_note].filter(Boolean).join(" ");
     warning.classList.remove("hide");
   }
-  const up = $("#studio-updates-open"); up.replaceChildren(icon("update", "ic"), el("span", { class: "t" }, "Updates")); up.onclick = () => go("Updates");
   $("#helpbtn").innerHTML = ICON.learn; $("#baychev").innerHTML = ICON.chev;
   $("#helpbtn").onclick = () => go("Tutorial");
   const th = $("#themebtn"); if (th) th.onclick = () => { if (typeof themeFlip === "function") themeFlip(); };

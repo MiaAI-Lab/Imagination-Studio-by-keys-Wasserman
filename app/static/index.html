@@ -30,8 +30,6 @@ try { const a = JSON.parse(localStorage.getItem("studio-look") || "null"), c = d
   <nav id="rooms" aria-label="Rooms"></nav>
   <div class="sidefoot">
     <button class="machinepill" id="mpill" type="button" title="Machine"><span class="dotl" id="mdot"></span><span id="plat"></span><span class="txt" id="mtxt"></span><span class="meter" aria-hidden="true"><i id="mgpu"></i><i id="mmem"></i></span></button>
-    <div class="verline"><span id="ver"></span><button id="studio-updates-open" type="button" title="Updates" aria-label="Updates"></button></div>
-    <div class="credit"><span class="pby">Powered by</span><span class="tf"><img class="sym" src="brand/tensorfold-symbol.webp" alt="" width="20" height="12"><span>TensorFold</span></span></div>
   </div>
 </aside>
 <header id="top">
@@ -1328,7 +1326,7 @@ function render() { const back = keepScroll(); renderShell(); releaseMedia($("#v
 (async () => { const want = decodeURIComponent(location.hash.slice(1)); if (TABS.includes(want)) tab = want; actLoad();
   // links can preset the Create form: ?goes=image, ?engine=h3&res=720p&up=1&step=4 ...
   for (const [k, v] of new URLSearchParams(location.search)) if (k in C && k !== "mode") C[k] = k === "up" ? v === "1" : (k === "step" || k === "count" ? Number(v) : v);
-  S = await api("/api/state"); await loadLoras(); if (typeof settingsLoad === "function") await settingsLoad().catch(() => {}); if (!S.turbo) C.engine = "fasth3"; sync(); for (const h of ["#gohome", "#mhome"]) $(h).onclick = e => { e.preventDefault(); T.coach = false; go("Home"); }; $("#plat").textContent = platName(); if (S.ffmpeg_note) { $("#warnbar").textContent = S.ffmpeg_note; $("#warnbar").classList.remove("hide"); } document.body.dataset.platform = S.platform; document.title = "Imagination Studio · " + platName(); $("#ver").textContent = "Studio " + S.version; shellStart(); $("#home").textContent = S.home; await poll(); render(); setInterval(poll, 2000);
+  S = await api("/api/state"); await loadLoras(); if (typeof settingsLoad === "function") await settingsLoad().catch(() => {}); if (!S.turbo) C.engine = "fasth3"; sync(); for (const h of ["#gohome", "#mhome"]) $(h).onclick = e => { e.preventDefault(); T.coach = false; go("Home"); }; $("#plat").textContent = platName(); if (S.ffmpeg_note) { $("#warnbar").textContent = S.ffmpeg_note; $("#warnbar").classList.remove("hide"); } document.body.dataset.platform = S.platform; document.title = "Imagination Studio · " + platName(); shellStart(); $("#home").textContent = S.home; await poll(); render(); setInterval(poll, 2000);
   // ?motionref opens the create wizard on the motion reference stored by the Motion Previs tab
   if (new URLSearchParams(location.search).has("motionref")) { try { const r = (await api("/api/motion/handoff")).reference; if (r) useMotionReference(r, await api("/api/motion/packs/" + r.pack).catch(() => null)); } catch {} } })();
 </script>
